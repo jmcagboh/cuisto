@@ -238,6 +238,17 @@
             menuToggle.classList.toggle('active'); 
         }
     </script>
+    <script>
+    window.addEventListener('scroll', function() {
+        const header = document.querySelector('header');
+        // Quand on défile de plus de 50px, on ajoute la classe 'sticky'
+        if (window.scrollY > 50) {
+            header.classList.add('sticky');
+        } else {
+            header.classList.remove('sticky');
+        }
+    });
+</script>
 
 </body>
 </html>
