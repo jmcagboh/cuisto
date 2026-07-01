@@ -594,13 +594,3 @@ header.sticky .menuToggle{
         text-align: center;
     }
 }
-@media (max-width: 901px) {
-    /* Liens blancs par défaut sur mobile tant qu'on n'a pas défilé */
-    header .navbar li a {
-        color: #fff;
-    }
-    /* Liens noirs quand on commence à défiler (quand le header devient blanc) */
-    header.sticky .navbar li a {
-        color: #000;
-    }
-}
