@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Connexion | Cuisto</title>
+</head>
+<body class="auth-page">
+    <main class="auth-card">
+        <a class="auth-logo" href="index.html"><span>C</span>uisto</a>
+        <p class="auth-kicker">Espace client</p>
+        <h1 id="authTitle">Bon retour parmi nous</h1>
+        <p class="auth-intro">Connectez-vous pour réserver votre prochain repas.</p>
+
+        <form id="authForm" class="auth-form">
+            <div id="profileFields" class="hidden-field">
+                <label for="authName">Nom complet</label>
+                <input id="authName" type="text" autocomplete="name" placeholder="Votre nom">
+                <label for="authPhone">Téléphone</label>
+                <input id="authPhone" type="tel" autocomplete="tel" placeholder="Votre téléphone">
+                <label for="authAddress">Adresse</label>
+                <input id="authAddress" type="text" autocomplete="street-address" placeholder="Votre adresse">
+            </div>
+            <label for="authEmail">Adresse e-mail</label>
+            <input id="authEmail" type="email" autocomplete="email" placeholder="vous@exemple.com" required>
+
+            <label for="authPassword">Mot de passe</label>
+            <input id="authPassword" type="password" autocomplete="current-password" placeholder="Votre mot de passe" minlength="6" required>
+
+            <div id="confirmPasswordGroup" class="hidden-field">
+                <label for="confirmPassword">Confirmer le mot de passe</label>
+                <input id="confirmPassword" type="password" autocomplete="new-password" placeholder="Répétez le mot de passe" minlength="6">
+            </div>
+
+            <button id="authSubmit" class="auth-submit" type="submit">Se connecter</button>
+            <p id="authMessage" class="auth-message" role="status" aria-live="polite"></p>
+        </form>
+
+        <div class="auth-links">
+            <button id="forgotPassword" type="button">Mot de passe oublié ?</button>
+            <button id="toggleAuthMode" type="button">Créer un compte</button>
+        </div>
+    </main>
+    <script src="script.js"></script>
+</body>
+</html>

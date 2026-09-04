@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Administration | Cuisto</title>
+</head>
+<body class="admin-page">
+    <main class="admin-shell">
+        <header class="admin-header">
+            <a class="auth-logo" href="index.html"><span>C</span>uisto</a>
+            <button id="adminLogout" class="admin-button" type="button">Se déconnecter</button>
+        </header>
+        <section>
+            <p class="auth-kicker">Tableau de bord</p>
+            <h1>Réservations</h1>
+            <p id="adminMessage" class="auth-message" role="status"></p>
+            <div id="reservationList" class="reservation-list">Chargement...</div>
+        </section>
+    </main>
+    <script>
+        const token = sessionStorage.getItem('cuistoToken');
+        const list = document.getElementById('reservationList');
+        const message = document.getElementById('adminMessage');
+        if (!token) window.location.href = 'login.html';
+        async function loadReservations() {
+            const response = await fetch('/api/reservations', { headers: { Authorization: `Bearer ${token}` } });
+            const result = await response.json();
+            if (!response.ok) { message.textContent = result.error; return; }
+            list.innerHTML = result.reservations.length ? result.reservations.map((reservation) => `
+                <article class="reservation-item">
+                    <div><strong>${reservation.customer.name}</strong><p>${reservation.customer.email} · ${reservation.customer.phone}</p><p>${reservation.customer.address}</p></div>
+                    <div><strong>${reservation.date} à ${reservation.time}</strong><p>${reservation.guests} personne(s)</p><p>${reservation.note || 'Sans remarque'}</p></div>
+                    <select data-id="${reservation.id}" aria-label="Statut de la réservation"><option ${reservation.status === 'En attente' ? 'selected' : ''}>En attente</option><option ${reservation.status === 'Confirmée' ? 'selected' : ''}>Confirmée</option><option ${reservation.status === 'Annulée' ? 'selected' : ''}>Annulée</option></select>
+                </article>`).join('') : '<p>Aucune réservation pour le moment.</p>';
+            list.querySelectorAll('select').forEach((select) => select.addEventListener('change', async () => {
+                await fetch(`/api/reservations/${select.dataset.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ status: select.value }) });
+            }));
+        }
+        document.getElementById('adminLogout').addEventListener('click', () => { sessionStorage.removeItem('cuistoToken'); window.location.href = 'login.html'; });
+        loadReservations();
+    </script>
+</body>
+</html>

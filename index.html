@@ -20,16 +20,16 @@
         </div>
 
         <header>
-            <a href="#" class ="logo"><span>C</span>uisto</a>
-            <div class="menuToggle" onclick="toggleMenu();"></div>
+            <a href="#baniere" class ="logo"><span>C</span>uisto</a>
+            <button class="menuToggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false"></button>
             <ul class="navbar">
-                <li><a href="#baniere" onclick="toggleMenu();">Acceuil</a></li>
-                <li><a href="#apropos" onclick="toggleMenu();">A propos</a></li>
-                <li><a href="#menu" onclick="toggleMenu();">Menu</a></li>
-                <li><a href="#jeu" onclick="toggleMenu();">Jeu</a></li>
-                <li><a href="#expert" onclick="toggleMenu();">Expert</a></li>
-                <li><a href="#contact" onclick="toggleMenu();">Contact</a></li>
-                <a href="#"class="btn-reserve"onclick="toggleMenu();">Reservation</a>
+                <li><a href="#baniere">Accueil</a></li>
+                <li><a href="#apropos">A propos</a></li>
+                <li><a href="#menu">Menu</a></li>
+                <li><a href="#jeu">Jeu</a></li>
+                <li><a href="#expert">Expert</a></li>
+                <li><a href="#contact">Contact</a></li>
+                <li><a href="login.html" class="btn-reserve">Reservation</a></li>
             </ul>
         </header>
         <main class="app-main">
@@ -37,8 +37,8 @@
         <div class="contenu">
            <h1>QUE DES PLATS DELICIEUX</h1> 
            <p>Manger pour vous et comme chez vous. Bon appetit!</p>
-           <a href="#" class="btn1">Notre Menu</a>
-           <a href="#"class="btn2">Reservation</a>
+           <a href="#menu" class="btn1">Notre Menu</a>
+           <a href="login.html" class="btn2">Reservation</a>
 
         </div>
     </section>
@@ -138,7 +138,7 @@
             
         </div>
         <div class="titre">
-            <a href="#" class="btn1">Voir Plus</a>
+            <a href="#contact" class="btn1">Commander</a>
         </div>
     </section>
         <section class="jeu" id="jeu">
@@ -246,6 +246,20 @@
             </div>
         </div>
     </section>
+    <section class="reservation" id="reservation">
+        <div class="titre noir">
+            <h2 class="titre-text"><span>R</span>éservation</h2>
+            <p>Connectez-vous pour réserver une table.</p>
+        </div>
+        <form class="reservation-form" id="reservationForm">
+            <input id="reservationDate" type="date" required aria-label="Date">
+            <input id="reservationTime" type="time" required aria-label="Heure">
+            <input id="reservationGuests" type="number" min="1" max="20" value="2" required aria-label="Nombre de personnes">
+            <textarea id="reservationNote" placeholder="Remarque (facultatif)" aria-label="Remarque"></textarea>
+            <button class="auth-submit" type="submit">Envoyer la réservation</button>
+            <p id="reservationMessage" class="auth-message" role="status"></p>
+        </form>
+    </section>
     <section class="contact" id="contact">
         <div class="titre noir">
             <h2 class="titre-text"><span>C</span>ontact</h2>
@@ -268,7 +282,7 @@
         </form>
     </section>
     <div class="copyright">
-        <p>copyright 2026 <a href="#">jmc AGBOH</a> projet Cuisto. Tous droits reservés</p>
+        <p>copyright 2026 <a href="#baniere">jmc AGBOH</a> projet Cuisto. Tous droits reservés</p>
     </div>
         </main>
     </div>
@@ -278,14 +292,6 @@
             const header =document.querySelector('header');
             header.classList.toggle("sticky", window.scrollY > 0);
         });
-
-
-        function toggleMenu(){
-            const menuToggle = document.querySelector('.menuToggle');
-            const navbar = document.querySelector('.navbar');
-            navbar.classList.toggle('active');
-            menuToggle.classList.toggle('active'); 
-        }
     </script>
 
 </body>

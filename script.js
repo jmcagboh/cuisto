@@ -1,5 +1,101 @@
 const contactEmail = 'jeanagboh86@gmail.com';
 
+const authForm = document.getElementById('authForm');
+const authTitle = document.getElementById('authTitle');
+const authSubmit = document.getElementById('authSubmit');
+const authMessage = document.getElementById('authMessage');
+const toggleAuthMode = document.getElementById('toggleAuthMode');
+const forgotPassword = document.getElementById('forgotPassword');
+const confirmPasswordGroup = document.getElementById('confirmPasswordGroup');
+const profileFields = document.getElementById('profileFields');
+const reservationForm = document.getElementById('reservationForm');
+const reservationMessage = document.getElementById('reservationMessage');
+let isRegisterMode = false;
+
+function showAuthMessage(message, isError = false) {
+  if (!authMessage) return;
+  authMessage.textContent = message;
+  authMessage.classList.toggle('error', isError);
+}
+
+toggleAuthMode?.addEventListener('click', () => {
+  isRegisterMode = !isRegisterMode;
+  authTitle.textContent = isRegisterMode ? 'Créer votre compte' : 'Bon retour parmi nous';
+  authSubmit.textContent = isRegisterMode ? 'Créer mon compte' : 'Se connecter';
+  toggleAuthMode.textContent = isRegisterMode ? 'J’ai déjà un compte' : 'Créer un compte';
+  confirmPasswordGroup.classList.toggle('hidden-field', !isRegisterMode);
+  profileFields?.classList.toggle('hidden-field', !isRegisterMode);
+  profileFields?.querySelectorAll('input').forEach((input) => { input.required = isRegisterMode; });
+  showAuthMessage('');
+});
+
+reservationForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const token = sessionStorage.getItem('cuistoToken');
+  if (!token) { window.location.href = 'login.html'; return; }
+  const response = await fetch('/api/reservations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ date: document.getElementById('reservationDate').value, time: document.getElementById('reservationTime').value, guests: document.getElementById('reservationGuests').value, note: document.getElementById('reservationNote').value })
+  });
+  const result = await response.json();
+  reservationMessage.textContent = response.ok ? result.message : result.error;
+  reservationMessage.classList.toggle('error', !response.ok);
+  if (response.ok) reservationForm.reset();
+});
+
+forgotPassword?.addEventListener('click', () => {
+  showAuthMessage('Un lien de réinitialisation sera envoyé par e-mail dans la version connectée.');
+});
+
+authForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const email = document.getElementById('authEmail').value.trim().toLowerCase();
+  const password = document.getElementById('authPassword').value;
+  const confirmPassword = document.getElementById('confirmPassword')?.value;
+  if (isRegisterMode) {
+    if (password !== confirmPassword) {
+      showAuthMessage('Les mots de passe ne correspondent pas.', true);
+      return;
+    }
+    const registerResponse = await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: document.getElementById('authName').value.trim(), phone: document.getElementById('authPhone').value.trim(), address: document.getElementById('authAddress').value.trim(), email, password }) });
+    const registerResult = await registerResponse.json();
+    if (!registerResponse.ok) { showAuthMessage(registerResult.error, true); return; }
+    showAuthMessage('Compte créé. Vous pouvez maintenant vous connecter.');
+    isRegisterMode = false;
+    authTitle.textContent = 'Bon retour parmi nous';
+    authSubmit.textContent = 'Se connecter';
+    toggleAuthMode.textContent = 'Créer un compte';
+    confirmPasswordGroup.classList.add('hidden-field');
+    profileFields?.classList.add('hidden-field');
+    profileFields?.querySelectorAll('input').forEach((input) => { input.required = false; });
+    return;
+  }
+  const loginResponse = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+  const loginResult = await loginResponse.json();
+  if (!loginResponse.ok) { showAuthMessage(loginResult.error, true); return; }
+  sessionStorage.setItem('cuistoToken', loginResult.token);
+  showAuthMessage('Connexion réussie. Redirection...');
+  window.setTimeout(() => { window.location.href = loginResult.redirect; }, 500);
+});
+
+const menuToggle = document.querySelector('.menuToggle');
+const navbar = document.querySelector('.navbar');
+
+function toggleMenu() {
+  if (!menuToggle || !navbar) return;
+  const isOpen = navbar.classList.toggle('active');
+  menuToggle.classList.toggle('active', isOpen);
+  menuToggle.setAttribute('aria-expanded', String(isOpen));
+}
+
+menuToggle?.addEventListener('click', toggleMenu);
+navbar?.querySelectorAll('a').forEach((link) => {
+  link.addEventListener('click', () => {
+    if (navbar.classList.contains('active')) toggleMenu();
+  });
+});
+
 const contactForm = document.getElementById('contactForm');
 
 if (contactForm) {
@@ -135,7 +231,7 @@ function startGame() {
   }, 1000);
 }
 
-gameBoard.addEventListener('click', (event) => {
+gameBoard?.addEventListener('click', (event) => {
   const card = event.target.closest('.dish-card');
   if (!card || !isPlaying) return;
 
@@ -154,5 +250,5 @@ gameBoard.addEventListener('click', (event) => {
   generateRound();
 });
 
-startGameBtn.addEventListener('click', startGame);
-updateScoreboard();
+startGameBtn?.addEventListener('click', startGame);
+if (scoreEl && timerEl && bestScoreEl) updateScoreboard();

@@ -1,0 +1,10 @@
+{
+  "name": "cuisto",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Serveur personnel de Cuisto",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
