@@ -10,20 +10,30 @@
     <title>Cuisto</title>
 </head>
 <body>
-    <header>
-        <a href="#" class ="logo"><span>C</span>uisto</a>
-        <div class="menuToggle" onclick="toggleMenu();"></div>
-        <ul class="navbar">
-            <li><a href="#baniere" onclick="toggleMenu();">Acceuil</a></li>
-            <li><a href="#apropos" onclick="toggleMenu();">A propos</a></li>
-            <li><a href="#menu" onclick="toggleMenu();">Menu</a></li>
-            <li><a href="#expert" onclick="toggleMenu();">Expert</a></li>
-            <li><a href="#temoignage" onclick="toggleMenu();">Temoignage</a></li>
-            <li><a href="#contact" onclick="toggleMenu();">Contact</a></li>
-            <a href="#"class="btn-reserve"onclick="toggleMenu();">Reservation</a>
-        </ul>
-    </header>
-    <section class="baniere" id="baniere">
+    <div class="mobile-app-shell">
+        <div class="app-launch" id="appLaunch">
+            <div class="launch-logo">C</div>
+            <p class="launch-tag">Cuisto</p>
+            <h1>Bienvenue chef !</h1>
+            <p>Prêt à tester ton coup de cœur culinaire ?</p>
+            <button id="appStartBtn" class="primary-btn">Jouer</button>
+        </div>
+
+        <header>
+            <a href="#" class ="logo"><span>C</span>uisto</a>
+            <div class="menuToggle" onclick="toggleMenu();"></div>
+            <ul class="navbar">
+                <li><a href="#baniere" onclick="toggleMenu();">Acceuil</a></li>
+                <li><a href="#apropos" onclick="toggleMenu();">A propos</a></li>
+                <li><a href="#menu" onclick="toggleMenu();">Menu</a></li>
+                <li><a href="#jeu" onclick="toggleMenu();">Jeu</a></li>
+                <li><a href="#expert" onclick="toggleMenu();">Expert</a></li>
+                <li><a href="#contact" onclick="toggleMenu();">Contact</a></li>
+                <a href="#"class="btn-reserve"onclick="toggleMenu();">Reservation</a>
+            </ul>
+        </header>
+        <main class="app-main">
+            <section class="baniere" id="baniere">
         <div class="contenu">
            <h1>QUE DES PLATS DELICIEUX</h1> 
            <p>Manger pour vous et comme chez vous. Bon appetit!</p>
@@ -131,7 +141,43 @@
             <a href="#" class="btn1">Voir Plus</a>
         </div>
     </section>
-        <section class="expert" id="expert">
+        <section class="jeu" id="jeu">
+        <div class="titre">
+            <h2 class="titre-texte"><span>J</span>eu</h2>
+            <p>Testez votre rapidité et trouvez le bon plat avant la fin du temps.</p>
+        </div>
+
+        <div class="game-panel">
+            <div class="game-header">
+                <div class="game-stat">
+                    <span>Score</span>
+                    <strong id="score">0</strong>
+                </div>
+                <div class="game-stat">
+                    <span>Temps</span>
+                    <strong id="timer">30</strong>
+                </div>
+                <div class="game-stat">
+                    <span>Record</span>
+                    <strong id="bestScore">0</strong>
+                </div>
+            </div>
+
+            <div class="objective">
+                <p>Récupérez :</p>
+                <h3 id="targetDish">Clique sur démarrer</h3>
+            </div>
+
+            <div id="gameBoard" class="game-board" aria-live="polite"></div>
+
+            <div class="game-actions">
+                <button id="startGameBtn" class="btn1">Démarrer</button>
+                <p id="gameMessage">Cliquez sur “Démarrer” pour jouer.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="expert" id="expert">
         <div class="titre">
             <h2 class="titre-texte"><span>N</span>os Expert</h2>
             <p>Avec des chefs spécialisés chacun dans des domaines précis.</p>
@@ -205,25 +251,28 @@
             <h2 class="titre-text"><span>C</span>ontact</h2>
             <p>Pour plus d'information nous sommes joignable à tous moment (24h/7j)</p>
         </div>
-        <div class="contactform">
+        <form class="contactform" id="contactForm">
             <h3>Envoyer un message</h3>
             <div class="inputboite">
-                <input type="text" placeholder="Votre nom">
+                <input type="text" id="nameInput" name="name" placeholder="Votre nom" required>
             </div>
             <div class="inputboite">
-                <input type="text" placeholder="Votre e-mail">
+                <input type="email" id="emailInput" name="email" placeholder="Votre e-mail" required>
             </div>
             <div class="inputboite">
-                <textarea placeholder="votre message" ></textarea>    
+                <textarea id="messageInput" name="message" placeholder="votre message" required></textarea>
             </div>
             <div class="inputboite">
                 <input type="submit" value="Envoyer">
             </div>
-        </div>
+        </form>
     </section>
     <div class="copyright">
         <p>copyright 2026 <a href="#">jmc AGBOH</a> projet Cuisto. Tous droits reservés</p>
     </div>
+        </main>
+    </div>
+    <script src="script.js"></script>
     <script type="text/javascript">
         window.addEventListener('scroll', function(){
             const header =document.querySelector('header');
@@ -232,7 +281,7 @@
 
 
         function toggleMenu(){
-            const menuToggle = document.querySelector('.menuToggle'); // Correction ici
+            const menuToggle = document.querySelector('.menuToggle');
             const navbar = document.querySelector('.navbar');
             navbar.classList.toggle('active');
             menuToggle.classList.toggle('active'); 
