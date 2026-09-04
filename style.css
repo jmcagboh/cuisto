@@ -829,7 +829,7 @@ header.sticky li a:hover{
         inset: 0;
         z-index: 2000;
         background: linear-gradient(180deg, rgba(39,24,16,0.95), rgba(251,145,31,0.9));
-        display: flex;
+        display: none;
         flex-direction: column;
         align-items: center;
         justify-content: center;

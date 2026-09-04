@@ -124,7 +124,6 @@ const appStartBtn = document.getElementById('appStartBtn');
 if (appStartBtn) {
   appStartBtn.addEventListener('click', () => {
     appLaunch.classList.add('hidden');
-    document.getElementById('jeu')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 }
 
