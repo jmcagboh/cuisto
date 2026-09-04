@@ -2,6 +2,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 const { URL } = require('url');
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -11,10 +12,21 @@ const DATA_FILE = path.join(DATA_DIR, 'cuisto.json');
 const sessions = new Map();
 const adminEmail = (process.env.ADMIN_EMAIL || 'admin@cuisto.local').toLowerCase();
 const adminPassword = process.env.ADMIN_PASSWORD || 'CuistoAdmin2026!';
+const notificationEmail = process.env.NOTIFICATION_EMAIL || adminEmail;
+const menuPrices = { 'Riz au gras': 2500, 'Akoumè avec fetri': 2000, 'Akoumè avec adémè': 2000, Pokoumè: 2000, Attiéké: 2500, Veyi: 2000, Spaghetti: 2500, 'Poisson braisé': 3000, 'Riz au poisson': 3000 };
+
+const mailer = process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD
+  ? nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT) || 587,
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD }
+    })
+  : null;
 
 function loadData() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-  if (!fs.existsSync(DATA_FILE)) fs.writeFileSync(DATA_FILE, JSON.stringify({ users: [], reservations: [] }, null, 2));
+  if (!fs.existsSync(DATA_FILE)) fs.writeFileSync(DATA_FILE, JSON.stringify({ users: [], reservations: [], messages: [], orders: [] }, null, 2));
   return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
 }
 
@@ -56,8 +68,110 @@ function publicUser(user) {
   return { id: user.id, name: user.name, email: user.email, phone: user.phone, address: user.address };
 }
 
+async function sendReservationNotification(reservation) {
+  if (!mailer) return;
+  const { customer } = reservation;
+  try {
+    await mailer.sendMail({
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to: notificationEmail,
+      subject: `Nouvelle réservation de ${customer.name}`,
+      text: [
+        'Une nouvelle réservation vient d\'être reçue.',
+        '',
+        `Client : ${customer.name}`,
+        `E-mail : ${customer.email}`,
+        `Téléphone : ${customer.phone}`,
+        `Adresse : ${customer.address}`,
+        `Date : ${reservation.date}`,
+        `Heure : ${reservation.time}`,
+        `Personnes : ${reservation.guests}`,
+        `Remarque : ${reservation.note || 'Aucune'}`
+      ].join('\n')
+    });
+  } catch (error) {
+    console.error(`Notification e-mail impossible : ${error.message}`);
+  }
+}
+
+async function sendOrderNotification(order) {
+  if (!mailer) return;
+  try {
+    await mailer.sendMail({
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to: notificationEmail,
+      subject: `Nouvelle commande de ${order.customer.name}`,
+      text: [
+        'Une nouvelle commande vient d\'être reçue.',
+        '',
+        `Client : ${order.customer.name}`,
+        `E-mail : ${order.customer.email}`,
+        `Téléphone : ${order.customer.phone}`,
+        `Mode : ${order.fulfillment === 'livraison' ? 'Livraison' : 'À emporter'}`,
+        `Paiement : ${order.paymentMethod === 'sur_place' ? 'Sur place' : 'À la livraison'}`,
+        `Adresse : ${order.address || 'Non renseignée'}`,
+        `Position : ${order.latitude && order.longitude ? `https://www.google.com/maps?q=${order.latitude},${order.longitude}` : 'Non renseignée'}`,
+        `Plats : ${order.items.map((item) => `${item.quantity} x ${item.name}`).join(', ')}`,
+        `Total : ${(order.total || 0).toLocaleString('fr-FR')} FCFA`,
+        `Remarque : ${order.note || 'Aucune'}`
+      ].join('\n')
+    });
+  } catch (error) {
+    console.error(`Notification commande impossible : ${error.message}`);
+  }
+}
+
+async function sendOrderStatusNotification(order) {
+  if (!mailer || !order.customer.email) return;
+  try {
+    await mailer.sendMail({
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to: order.customer.email,
+      subject: `Mise à jour de votre commande Cuisto : ${order.status}`,
+      text: [
+        `Bonjour ${order.customer.name},`,
+        '',
+        `Le statut de votre commande est maintenant : ${order.status}.`,
+        '',
+        `Plats : ${order.items.map((item) => `${item.quantity} x ${item.name}`).join(', ')}`,
+        `Total : ${(order.total || 0).toLocaleString('fr-FR')} FCFA`,
+        '',
+        'Merci de votre confiance.',
+        'Cuisto'
+      ].join('\n')
+    });
+  } catch (error) {
+    console.error(`Notification de statut impossible : ${error.message}`);
+  }
+}
+
 async function handleApi(request, response, url) {
   const data = loadData();
+  if (request.method === 'POST' && url.pathname === '/api/contact') {
+    const body = await readBody(request);
+    const name = String(body.name || '').trim();
+    const email = String(body.email || '').trim();
+    const message = String(body.message || '').trim();
+    if (!name || !email || !message) return send(response, 400, { error: 'Tous les champs sont obligatoires.' });
+    data.messages ??= [];
+    const contactMessage = { id: crypto.randomUUID(), name, email, message, createdAt: new Date().toISOString() };
+    data.messages.push(contactMessage);
+    saveData(data);
+    if (!mailer) return send(response, 503, { error: 'Le service de messagerie n’est pas encore configuré.' });
+    try {
+      await mailer.sendMail({
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        to: notificationEmail,
+        replyTo: email,
+        subject: `Message depuis Cuisto - ${name}`,
+        text: `Nom : ${name}\nE-mail : ${email}\n\nMessage :\n${message}`
+      });
+      return send(response, 200, { message: 'Message envoyé avec succès.' });
+    } catch (error) {
+      console.error(`Message contact impossible : ${error.message}`);
+      return send(response, 502, { error: 'Le message n’a pas pu être envoyé.' });
+    }
+  }
   if (request.method === 'POST' && url.pathname === '/api/register') {
     const body = await readBody(request);
     const email = String(body.email || '').trim().toLowerCase();
@@ -75,20 +189,65 @@ async function handleApi(request, response, url) {
     if (!isAdmin && (!user || !verifyPassword(body.password || '', user.password))) return send(response, 401, { error: 'E-mail ou mot de passe incorrect.' });
     user = isAdmin ? { id: 'admin', name: 'Administrateur', email: adminEmail, role: 'admin' } : user;
     const token = crypto.randomBytes(32).toString('hex'); sessions.set(token, user);
-    return send(response, 200, { token, user: publicUser(user), redirect: isAdmin ? '/admin.html' : '/index.html#reservation' });
+    return send(response, 200, { token, user: publicUser(user), redirect: isAdmin ? '/admin.html' : '/index.html' });
   }
   if (request.method === 'POST' && url.pathname === '/api/reservations') {
     const user = getUser(request);
     if (!user || user.role === 'admin') return send(response, 401, { error: 'Connectez-vous pour réserver.' });
     const body = await readBody(request);
     if (!body.date || !body.time || !body.guests) return send(response, 400, { error: 'Date, heure et nombre de personnes sont obligatoires.' });
-    data.reservations.push({ id: crypto.randomUUID(), userId: user.id, customer: publicUser(user), date: body.date, time: body.time, guests: Number(body.guests), note: String(body.note || '').trim(), status: 'En attente', createdAt: new Date().toISOString() });
-    saveData(data); return send(response, 201, { message: 'Réservation envoyée.' });
+    const reservation = { id: crypto.randomUUID(), userId: user.id, customer: publicUser(user), date: body.date, time: body.time, guests: Number(body.guests), note: String(body.note || '').trim(), status: 'En attente', createdAt: new Date().toISOString() };
+    data.reservations.push(reservation);
+    saveData(data);
+    await sendReservationNotification(reservation);
+    return send(response, 201, { message: 'Réservation envoyée.' });
+  }
+  if (request.method === 'POST' && url.pathname === '/api/orders') {
+    const user = getUser(request);
+    if (!user || user.role === 'admin') return send(response, 401, { error: 'Connectez-vous pour commander.' });
+    const body = await readBody(request);
+    const items = Array.isArray(body.items) ? body.items.filter((item) => menuPrices[item.name] && Number(item.quantity) > 0).map((item) => ({ name: String(item.name), quantity: Number(item.quantity), unitPrice: menuPrices[item.name] })) : [];
+    const fulfillment = body.fulfillment === 'livraison' ? 'livraison' : 'emporter';
+    const paymentMethod = body.paymentMethod === 'sur_place' ? 'sur_place' : 'livraison';
+    const address = String(body.address || '').trim();
+    const latitude = Number(body.latitude);
+    const longitude = Number(body.longitude);
+    if (!items.length) return send(response, 400, { error: 'Choisissez au moins un plat.' });
+    if (fulfillment === 'livraison' && !address && (!Number.isFinite(latitude) || !Number.isFinite(longitude))) return send(response, 400, { error: 'Indiquez une adresse ou partagez votre position pour la livraison.' });
+    const total = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+    data.orders ??= [];
+    const order = { id: crypto.randomUUID(), userId: user.id, customer: publicUser(user), items, total, fulfillment, paymentMethod, address, latitude: Number.isFinite(latitude) ? latitude : null, longitude: Number.isFinite(longitude) ? longitude : null, note: String(body.note || '').trim(), status: 'Nouvelle', createdAt: new Date().toISOString() };
+    data.orders.push(order);
+    saveData(data);
+    await sendOrderNotification(order);
+    return send(response, 201, { message: 'Commande envoyée.' });
   }
   if (request.method === 'GET' && url.pathname === '/api/reservations') {
     const user = getUser(request);
     if (!user || user.role !== 'admin') return send(response, 403, { error: 'Accès administrateur requis.' });
     return send(response, 200, { reservations: data.reservations });
+  }
+  if (request.method === 'GET' && url.pathname === '/api/contact-messages') {
+    const user = getUser(request);
+    if (!user || user.role !== 'admin') return send(response, 403, { error: 'Accès administrateur requis.' });
+    return send(response, 200, { messages: data.messages || [] });
+  }
+  if (request.method === 'GET' && url.pathname === '/api/orders') {
+    const user = getUser(request);
+    if (!user || user.role !== 'admin') return send(response, 403, { error: 'Accès administrateur requis.' });
+    return send(response, 200, { orders: data.orders || [] });
+  }
+  if (request.method === 'PATCH' && url.pathname.startsWith('/api/orders/')) {
+    const user = getUser(request);
+    if (!user || user.role !== 'admin') return send(response, 403, { error: 'Accès administrateur requis.' });
+    const id = url.pathname.split('/').pop(); const body = await readBody(request);
+    const order = (data.orders || []).find((item) => item.id === id);
+    if (!order) return send(response, 404, { error: 'Commande introuvable.' });
+    const previousStatus = order.status;
+    order.status = String(body.status || order.status);
+    saveData(data);
+    if (order.status !== previousStatus) await sendOrderStatusNotification(order);
+    return send(response, 200, { order });
   }
   if (request.method === 'PATCH' && url.pathname.startsWith('/api/reservations/')) {
     const user = getUser(request);
@@ -114,4 +273,7 @@ const server = http.createServer(async (request, response) => {
   try { if (url.pathname.startsWith('/api/')) await handleApi(request, response, url); else serveStatic(response, url.pathname); }
   catch (error) { send(response, 500, { error: 'Erreur interne du serveur.' }); }
 });
-server.listen(PORT, () => console.log(`Cuisto est disponible sur http://localhost:${PORT}`));
+server.listen(PORT, () => {
+  console.log(`Cuisto est disponible sur http://localhost:${PORT}`);
+  console.log(mailer ? `Notifications e-mail activees vers ${notificationEmail}` : 'Notifications e-mail desactivees : variables SMTP manquantes');
+});

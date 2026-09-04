@@ -17,11 +17,17 @@
             <h1>Réservations</h1>
             <p id="adminMessage" class="auth-message" role="status"></p>
             <div id="reservationList" class="reservation-list">Chargement...</div>
+            <h1>Commandes</h1>
+            <div id="orderList" class="reservation-list">Chargement...</div>
+            <h1>Messages reçus</h1>
+            <div id="messageList" class="reservation-list">Chargement...</div>
         </section>
     </main>
     <script>
         const token = sessionStorage.getItem('cuistoToken');
         const list = document.getElementById('reservationList');
+        const messageList = document.getElementById('messageList');
+        const orderList = document.getElementById('orderList');
         const message = document.getElementById('adminMessage');
         if (!token) window.location.href = 'login.html';
         async function loadReservations() {
@@ -38,8 +44,34 @@
                 await fetch(`/api/reservations/${select.dataset.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ status: select.value }) });
             }));
         }
+        async function loadMessages() {
+            const response = await fetch('/api/contact-messages', { headers: { Authorization: `Bearer ${token}` } });
+            const result = await response.json();
+            if (!response.ok) { message.textContent = result.error; return; }
+            messageList.innerHTML = result.messages.length ? result.messages.map((item) => `
+                <article class="reservation-item">
+                    <div><strong>${item.name}</strong><p>${item.email}</p></div>
+                    <div><p>${item.message}</p><p>${new Date(item.createdAt).toLocaleString('fr-FR')}</p></div>
+                </article>`).join('') : '<p>Aucun message pour le moment.</p>';
+        }
+        async function loadOrders() {
+            const response = await fetch('/api/orders', { headers: { Authorization: `Bearer ${token}` } });
+            const result = await response.json();
+            if (!response.ok) { message.textContent = result.error; return; }
+            orderList.innerHTML = result.orders.length ? result.orders.map((order) => `
+                <article class="reservation-item order-item">
+                    <div><strong>${order.customer.name}</strong><p>${order.customer.email} · ${order.customer.phone}</p><p>${order.fulfillment === 'livraison' ? `Livraison : ${order.address}` : 'À emporter'}</p><p>Paiement : ${order.paymentMethod === 'sur_place' ? 'Sur place' : 'À la livraison'}</p>${order.latitude && order.longitude ? `<p><a href="https://www.google.com/maps?q=${order.latitude},${order.longitude}" target="_blank" rel="noopener">Voir la position sur Google Maps</a></p>` : ''}</div>
+                    <div><strong>${order.items.map((item) => `${item.quantity} x ${item.name}`).join(', ')}</strong><p>Total : ${(order.total || 0).toLocaleString('fr-FR')} FCFA</p><p>${order.note || 'Sans remarque'}</p><p>${new Date(order.createdAt).toLocaleString('fr-FR')}</p></div>
+                    <select data-id="${order.id}" aria-label="Statut de la commande"><option ${order.status === 'Nouvelle' ? 'selected' : ''}>Nouvelle</option><option ${order.status === 'En préparation' ? 'selected' : ''}>En préparation</option><option ${order.status === 'Prête' ? 'selected' : ''}>Prête</option><option ${order.status === 'Livrée' ? 'selected' : ''}>Livrée</option><option ${order.status === 'Annulée' ? 'selected' : ''}>Annulée</option></select>
+                </article>`).join('') : '<p>Aucune commande pour le moment.</p>';
+            orderList.querySelectorAll('select').forEach((select) => select.addEventListener('change', async () => {
+                await fetch(`/api/orders/${select.dataset.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ status: select.value }) });
+            }));
+        }
         document.getElementById('adminLogout').addEventListener('click', () => { sessionStorage.removeItem('cuistoToken'); window.location.href = 'login.html'; });
         loadReservations();
+        loadOrders();
+        loadMessages();
     </script>
 </body>
 </html>

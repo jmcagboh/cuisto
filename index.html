@@ -26,10 +26,11 @@
                 <li><a href="#baniere">Accueil</a></li>
                 <li><a href="#apropos">A propos</a></li>
                 <li><a href="#menu">Menu</a></li>
+                <li><a href="#commande">Commander</a></li>
                 <li><a href="#jeu">Jeu</a></li>
                 <li><a href="#expert">Expert</a></li>
                 <li><a href="#contact">Contact</a></li>
-                <li><a href="login.html" class="btn-reserve">Reservation</a></li>
+                <li><a id="authNavLink" href="login.html" class="btn-reserve">Se connecter</a></li>
             </ul>
         </header>
         <main class="app-main">
@@ -38,7 +39,7 @@
            <h1>QUE DES PLATS DELICIEUX</h1> 
            <p>Manger pour vous et comme chez vous. Bon appetit!</p>
            <a href="#menu" class="btn1">Notre Menu</a>
-           <a href="login.html" class="btn2">Reservation</a>
+           <a id="reservationLink" href="login.html" class="btn2">Reservation</a>
 
         </div>
     </section>
@@ -68,7 +69,7 @@
                     <img src="./image/photo14.jpg" alt="">
                 </div>
                 <div class="text">
-                    <h3>Special riz au gras</h3>
+                    <h3>Special riz au gras</h3><p class="dish-price">2 500 FCFA</p>
                 </div>
             </div>
             <div class="box">
@@ -76,7 +77,7 @@
                     <img src="./image/photo8.jpg" alt="">
                 </div>
                 <div class="text">
-                    <h3>Special akoumè avec fetri</h3>
+                    <h3>Special akoumè avec fetri</h3><p class="dish-price">2 000 FCFA</p>
                 </div>
             </div>
             <div class="box">
@@ -84,7 +85,7 @@
                     <img src="./image/photo7.jpg" alt="">
                 </div>
                 <div class="text">
-                    <h3>Special akoumè avec adémè</h3>
+                    <h3>Special akoumè avec adémè</h3><p class="dish-price">2 000 FCFA</p>
                 </div>
             </div>
             <div class="box">
@@ -92,7 +93,7 @@
                     <img src="./image/photo6.jpg" alt="">
                 </div>
                 <div class="text">
-                    <h3>Special pokoumè</h3>
+                    <h3>Special pokoumè</h3><p class="dish-price">2 000 FCFA</p>
                 </div>
             </div>
             <div class="box">
@@ -100,7 +101,7 @@
                     <img src="./image/photo4.jpg" alt="">
                 </div>
                 <div class="text">
-                    <h3>Special attièkè</h3>
+                    <h3>Special attièkè</h3><p class="dish-price">2 500 FCFA</p>
                 </div>
             </div>
             <div class="box">
@@ -108,7 +109,7 @@
                     <img src="./image/photo5.jpg" alt="">
                 </div>
                 <div class="text">
-                    <h3>Special veyi</h3>
+                    <h3>Special veyi</h3><p class="dish-price">2 000 FCFA</p>
                 </div>
             </div>
             <div class="box">
@@ -116,7 +117,7 @@
                     <img src="./image/photo11.jpg" alt="">
                 </div>
                 <div class="text">
-                    <h3>Special spaghetti</h3>
+                    <h3>Special spaghetti</h3><p class="dish-price">2 500 FCFA</p>
                 </div>
             </div>
             <div class="box">
@@ -124,7 +125,7 @@
                     <img src="./image/photo12.jpg" alt="">
                 </div>
                 <div class="text">
-                    <h3>Special poisson braisé</h3>
+                    <h3>Special poisson braisé</h3><p class="dish-price">3 000 FCFA</p>
                 </div>
             </div>
             <div class="box">
@@ -132,13 +133,13 @@
                     <img src="./image/photo9.jpg" alt="">
                 </div>
                 <div class="text">
-                    <h3>Special riz au poisson</h3>
+                    <h3>Special riz au poisson</h3><p class="dish-price">3 000 FCFA</p>
                 </div>
             </div>
             
         </div>
         <div class="titre">
-            <a href="#contact" class="btn1">Commander</a>
+            <a href="#commande" class="btn1">Commander</a>
         </div>
     </section>
         <section class="jeu" id="jeu">
@@ -246,6 +247,45 @@
             </div>
         </div>
     </section>
+    <section class="commande" id="commande">
+        <div class="titre noir">
+            <h2 class="titre-text"><span>C</span>ommande</h2>
+            <p>Choisissez vos plats, puis indiquez si vous venez les chercher ou si vous souhaitez être livré.</p>
+        </div>
+        <form class="order-form" id="orderForm">
+            <div class="order-items">
+                    <label><span>Riz au gras <strong>2 500 FCFA</strong></span><input type="number" min="0" max="20" value="0" data-price="2500" data-dish="Riz au gras" aria-label="Quantité Riz au gras"></label>
+                    <label><span>Akoumè avec fetri <strong>2 000 FCFA</strong></span><input type="number" min="0" max="20" value="0" data-price="2000" data-dish="Akoumè avec fetri" aria-label="Quantité Akoumè avec fetri"></label>
+                    <label><span>Akoumè avec adémè <strong>2 000 FCFA</strong></span><input type="number" min="0" max="20" value="0" data-price="2000" data-dish="Akoumè avec adémè" aria-label="Quantité Akoumè avec adémè"></label>
+                    <label><span>Pokoumè <strong>2 000 FCFA</strong></span><input type="number" min="0" max="20" value="0" data-price="2000" data-dish="Pokoumè" aria-label="Quantité Pokoumè"></label>
+                    <label><span>Attiéké <strong>2 500 FCFA</strong></span><input type="number" min="0" max="20" value="0" data-price="2500" data-dish="Attiéké" aria-label="Quantité Attiéké"></label>
+                    <label><span>Veyi <strong>2 000 FCFA</strong></span><input type="number" min="0" max="20" value="0" data-price="2000" data-dish="Veyi" aria-label="Quantité Veyi"></label>
+                    <label><span>Spaghetti <strong>2 500 FCFA</strong></span><input type="number" min="0" max="20" value="0" data-price="2500" data-dish="Spaghetti" aria-label="Quantité Spaghetti"></label>
+                    <label><span>Poisson braisé <strong>3 000 FCFA</strong></span><input type="number" min="0" max="20" value="0" data-price="3000" data-dish="Poisson braisé" aria-label="Quantité Poisson braisé"></label>
+                    <label><span>Riz au poisson <strong>3 000 FCFA</strong></span><input type="number" min="0" max="20" value="0" data-price="3000" data-dish="Riz au poisson" aria-label="Quantité Riz au poisson"></label>
+            </div>
+                <div class="order-total">Total : <strong id="orderTotal">0 FCFA</strong></div>
+            <div class="order-choice">
+                <label><input type="radio" name="fulfillment" value="emporter" checked> À emporter</label>
+                <label><input type="radio" name="fulfillment" value="livraison"> Livraison</label>
+            </div>
+            <div class="order-choice">
+                <span class="order-choice-title">Mode de paiement</span>
+                <label><input type="radio" name="paymentMethod" value="livraison" checked> Paiement à la livraison</label>
+                <label><input type="radio" name="paymentMethod" value="sur_place"> Paiement sur place</label>
+            </div>
+            <div class="location-tools">
+                <input id="orderAddress" type="text" placeholder="Adresse de livraison" aria-label="Adresse de livraison" disabled>
+                <button id="locationButton" class="location-button" type="button" disabled>Utiliser ma position</button>
+            </div>
+            <input id="orderLatitude" type="hidden">
+            <input id="orderLongitude" type="hidden">
+            <p id="locationMessage" class="location-message" role="status"></p>
+            <textarea id="orderNote" placeholder="Remarque (facultatif)" aria-label="Remarque commande"></textarea>
+            <button class="auth-submit" type="submit">Envoyer la commande</button>
+            <p id="orderMessage" class="auth-message" role="status"></p>
+        </form>
+    </section>
     <section class="reservation" id="reservation">
         <div class="titre noir">
             <h2 class="titre-text"><span>R</span>éservation</h2>
@@ -279,6 +319,7 @@
             <div class="inputboite">
                 <input type="submit" value="Envoyer">
             </div>
+            <p class="contact-status auth-message" role="status"></p>
         </form>
     </section>
     <div class="copyright">

@@ -1,4 +1,15 @@
 const contactEmail = 'jeanagboh86@gmail.com';
+const authNavLink = document.getElementById('authNavLink');
+const reservationLink = document.getElementById('reservationLink');
+const isConnected = Boolean(sessionStorage.getItem('cuistoToken'));
+
+if (isConnected) {
+  if (authNavLink) {
+    authNavLink.href = '#reservation';
+    authNavLink.textContent = 'Réserver';
+  }
+  if (reservationLink) reservationLink.href = '#reservation';
+}
 
 const authForm = document.getElementById('authForm');
 const authTitle = document.getElementById('authTitle');
@@ -42,6 +53,84 @@ reservationForm?.addEventListener('submit', async (event) => {
   reservationMessage.textContent = response.ok ? result.message : result.error;
   reservationMessage.classList.toggle('error', !response.ok);
   if (response.ok) reservationForm.reset();
+});
+
+const orderForm = document.getElementById('orderForm');
+const orderMessage = document.getElementById('orderMessage');
+const orderAddress = document.getElementById('orderAddress');
+const locationButton = document.getElementById('locationButton');
+const locationMessage = document.getElementById('locationMessage');
+const orderLatitude = document.getElementById('orderLatitude');
+const orderLongitude = document.getElementById('orderLongitude');
+const orderTotal = document.getElementById('orderTotal');
+const formatPrice = (value) => `${value.toLocaleString('fr-FR')} FCFA`;
+
+function updateOrderTotal() {
+  const total = [...orderForm.querySelectorAll('[data-price]')]
+    .reduce((sum, input) => sum + Number(input.value) * Number(input.dataset.price), 0);
+  orderTotal.textContent = formatPrice(total);
+}
+
+orderForm?.querySelectorAll('[data-price]').forEach((input) => input.addEventListener('input', updateOrderTotal));
+
+document.querySelectorAll('input[name="fulfillment"]').forEach((input) => {
+  input.addEventListener('change', () => {
+    const isDelivery = input.value === 'livraison' && input.checked;
+    orderAddress.required = isDelivery;
+    orderAddress.disabled = !isDelivery;
+    locationButton.disabled = !isDelivery;
+    if (!isDelivery) {
+      orderAddress.value = '';
+      orderLatitude.value = '';
+      orderLongitude.value = '';
+      locationMessage.textContent = '';
+    }
+  });
+});
+
+locationButton?.addEventListener('click', () => {
+  if (!navigator.geolocation) {
+    locationMessage.textContent = 'La géolocalisation n’est pas disponible sur cet appareil.';
+    return;
+  }
+  locationMessage.textContent = 'Recherche de votre position...';
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      orderLatitude.value = position.coords.latitude.toFixed(6);
+      orderLongitude.value = position.coords.longitude.toFixed(6);
+      orderAddress.required = false;
+      locationMessage.textContent = 'Position enregistrée pour la livraison.';
+    },
+    () => { locationMessage.textContent = 'Position refusée. Vous pouvez saisir votre adresse.'; },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+  );
+});
+
+orderForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const token = sessionStorage.getItem('cuistoToken');
+  if (!token) { window.location.href = 'login.html'; return; }
+  const items = [...orderForm.querySelectorAll('[data-dish]')]
+    .map((input) => ({ name: input.dataset.dish, quantity: Number(input.value), unitPrice: Number(input.dataset.price) }))
+    .filter((item) => item.quantity > 0);
+  const fulfillment = orderForm.querySelector('input[name="fulfillment"]:checked').value;
+  const paymentMethod = orderForm.querySelector('input[name="paymentMethod"]:checked').value;
+  const response = await fetch('/api/orders', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ items, fulfillment, paymentMethod, address: orderAddress.value.trim(), latitude: orderLatitude.value, longitude: orderLongitude.value, note: document.getElementById('orderNote').value.trim() })
+  });
+  const result = await response.json();
+  orderMessage.textContent = response.ok ? result.message : result.error;
+  orderMessage.classList.toggle('error', !response.ok);
+  if (response.ok) {
+    orderForm.reset();
+    orderAddress.disabled = true;
+    orderAddress.required = false;
+    locationButton.disabled = true;
+    locationMessage.textContent = '';
+    updateOrderTotal();
+  }
 });
 
 forgotPassword?.addEventListener('click', () => {
@@ -99,7 +188,7 @@ navbar?.querySelectorAll('a').forEach((link) => {
 const contactForm = document.getElementById('contactForm');
 
 if (contactForm) {
-  contactForm.addEventListener('submit', (event) => {
+  contactForm.addEventListener('submit', async (event) => {
     event.preventDefault();
 
     const name = document.getElementById('nameInput')?.value.trim() || 'Client';
@@ -107,14 +196,18 @@ if (contactForm) {
     const message = document.getElementById('messageInput')?.value.trim() || '';
 
     if (!email || !message) return;
-
-    const subject = encodeURIComponent(`Message depuis Cuisto - ${name}`);
-    const body = encodeURIComponent(
-      `Nom: ${name}\nEmail: ${email}\n\nMessage:\n${message}`
-    );
-
-    window.location.href = `mailto:${contactEmail}?subject=${subject}&body=${body}`;
-    contactForm.reset();
+    const response = await fetch('/api/contact', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, message })
+    });
+    const result = await response.json();
+    const status = contactForm.querySelector('.contact-status');
+    if (status) {
+      status.textContent = response.ok ? result.message : result.error;
+      status.classList.toggle('error', !response.ok);
+    }
+    if (response.ok) contactForm.reset();
   });
 }
 
