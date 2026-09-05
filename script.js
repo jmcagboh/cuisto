@@ -147,17 +147,12 @@ authForm?.addEventListener('submit', async (event) => {
       showAuthMessage('Les mots de passe ne correspondent pas.', true);
       return;
     }
-    const registerResponse = await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: document.getElementById('authName').value.trim(), phone: document.getElementById('authPhone').value.trim(), address: document.getElementById('authAddress').value.trim(), email, password }) });
+    const registerResponse = await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: document.getElementById('authName').value.trim(), email, password }) });
     const registerResult = await registerResponse.json();
     if (!registerResponse.ok) { showAuthMessage(registerResult.error, true); return; }
-    showAuthMessage('Compte créé. Vous pouvez maintenant vous connecter.');
-    isRegisterMode = false;
-    authTitle.textContent = 'Bon retour parmi nous';
-    authSubmit.textContent = 'Se connecter';
-    toggleAuthMode.textContent = 'Créer un compte';
-    confirmPasswordGroup.classList.add('hidden-field');
-    profileFields?.classList.add('hidden-field');
-    profileFields?.querySelectorAll('input').forEach((input) => { input.required = false; });
+    sessionStorage.setItem('cuistoToken', registerResult.token);
+    showAuthMessage('Compte créé. Accès au site...');
+    window.setTimeout(() => { window.location.href = registerResult.redirect; }, 300);
     return;
   }
   const loginResponse = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });

@@ -175,11 +175,13 @@ async function handleApi(request, response, url) {
   if (request.method === 'POST' && url.pathname === '/api/register') {
     const body = await readBody(request);
     const email = String(body.email || '').trim().toLowerCase();
-    if (!body.name || !email || !body.phone || !body.address || String(body.password || '').length < 6) return send(response, 400, { error: 'Tous les champs sont obligatoires et le mot de passe doit contenir 6 caractères.' });
+    if (!body.name || !email || String(body.password || '').length < 6) return send(response, 400, { error: 'Le nom, l’e-mail et un mot de passe de 6 caractères minimum sont obligatoires.' });
     if (data.users.some((user) => user.email === email)) return send(response, 409, { error: 'Cet e-mail est déjà utilisé.' });
-    const user = { id: crypto.randomUUID(), name: String(body.name).trim(), email, phone: String(body.phone).trim(), address: String(body.address).trim(), password: hashPassword(body.password) };
+    const user = { id: crypto.randomUUID(), name: String(body.name).trim(), email, phone: '', address: '', password: hashPassword(body.password) };
     data.users.push(user); saveData(data);
-    return send(response, 201, { message: 'Compte créé.' });
+    const token = crypto.randomBytes(32).toString('hex');
+    sessions.set(token, user);
+    return send(response, 201, { message: 'Compte créé.', token, redirect: '/index.html' });
   }
   if (request.method === 'POST' && url.pathname === '/api/login') {
     const body = await readBody(request);

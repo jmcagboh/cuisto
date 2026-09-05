@@ -6,7 +6,7 @@ Node.js 18 ou plus récent est nécessaire.
 
 ```powershell
 $env:ADMIN_EMAIL = "admin@cuisto.local"
-$env:ADMIN_PASSWORD = "ChangeMoiAvecUnMotDePasseFort"
+$env:ADMIN_PASSWORD = "CuistoAdmin2026!"
 $env:NOTIFICATION_EMAIL = "votre-adresse@email.com"
 $env:SMTP_HOST = "smtp.gmail.com"
 $env:SMTP_PORT = "587"
