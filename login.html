@@ -24,11 +24,6 @@
             <label for="authPassword"> Mot de passe</label>
             <input id="authPassword" type="password" autocomplete="current-password" placeholder="Votre mot de passe" minlength="6" required>
 
-            <div id="confirmPasswordGroup" class="hidden-field">
-                <label for="confirmPassword">Confirmer le mot de passe</label>
-                <input id="confirmPassword" type="password" autocomplete="new-password" placeholder="Répétez le mot de passe" minlength="6">
-            </div>
-
             <button id="authSubmit" class="auth-submit" type="submit">Se connecter</button>
             <p id="authMessage" class="auth-message" role="status" aria-live="polite"></p>
         </form>
@@ -37,6 +32,13 @@
             <button id="forgotPassword" type="button">Mot de passe oublié ?</button>
             <button id="toggleAuthMode" type="button">Créer un compte</button>
         </div>
+        <form id="resetForm" class="auth-form hidden-field">
+            <label for="newPassword">Nouveau mot de passe</label>
+            <input id="newPassword" type="password" minlength="6" placeholder="Au moins 6 caractères" required>
+            <label for="resetConfirmPassword">Confirmer le mot de passe</label>
+            <input id="resetConfirmPassword" type="password" minlength="6" placeholder="Répétez le mot de passe" required>
+            <button class="auth-submit" type="submit">Enregistrer le nouveau mot de passe</button>
+        </form>
     </main>
     <script src="script.js"></script>
 </body>

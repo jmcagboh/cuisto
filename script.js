@@ -1,23 +1,11 @@
 const contactEmail = 'jeanagboh86@gmail.com';
-const authNavLink = document.getElementById('authNavLink');
-const reservationLink = document.getElementById('reservationLink');
-const isConnected = Boolean(sessionStorage.getItem('cuistoToken'));
-
-if (isConnected) {
-  if (authNavLink) {
-    authNavLink.href = '#reservation';
-    authNavLink.textContent = 'Réserver';
-  }
-  if (reservationLink) reservationLink.href = '#reservation';
-}
-
 const authForm = document.getElementById('authForm');
 const authTitle = document.getElementById('authTitle');
 const authSubmit = document.getElementById('authSubmit');
 const authMessage = document.getElementById('authMessage');
 const toggleAuthMode = document.getElementById('toggleAuthMode');
 const forgotPassword = document.getElementById('forgotPassword');
-const confirmPasswordGroup = document.getElementById('confirmPasswordGroup');
+const resetForm = document.getElementById('resetForm');
 const profileFields = document.getElementById('profileFields');
 const reservationForm = document.getElementById('reservationForm');
 const reservationMessage = document.getElementById('reservationMessage');
@@ -34,7 +22,6 @@ toggleAuthMode?.addEventListener('click', () => {
   authTitle.textContent = isRegisterMode ? 'Créer votre compte' : 'Bon retour parmi nous';
   authSubmit.textContent = isRegisterMode ? 'Créer mon compte' : 'Se connecter';
   toggleAuthMode.textContent = isRegisterMode ? 'J’ai déjà un compte' : 'Créer un compte';
-  confirmPasswordGroup.classList.toggle('hidden-field', !isRegisterMode);
   profileFields?.classList.toggle('hidden-field', !isRegisterMode);
   profileFields?.querySelectorAll('input').forEach((input) => { input.required = isRegisterMode; });
   showAuthMessage('');
@@ -133,26 +120,46 @@ orderForm?.addEventListener('submit', async (event) => {
   }
 });
 
-forgotPassword?.addEventListener('click', () => {
-  showAuthMessage('Un lien de réinitialisation sera envoyé par e-mail dans la version connectée.');
+forgotPassword?.addEventListener('click', async () => {
+  const email = document.getElementById('authEmail')?.value.trim().toLowerCase();
+  if (!email) { showAuthMessage('Saisissez votre adresse e-mail.', true); return; }
+  const response = await fetch('/api/forgot-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+  const result = await response.json();
+  showAuthMessage(result.message || result.error, !response.ok);
 });
+
+const resetToken = new URLSearchParams(window.location.search).get('reset');
+if (resetToken && resetForm) {
+  authForm.classList.add('hidden-field');
+  document.querySelector('.auth-links')?.classList.add('hidden-field');
+  resetForm.classList.remove('hidden-field');
+  resetForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const password = document.getElementById('newPassword').value;
+    const confirmation = document.getElementById('resetConfirmPassword').value;
+    if (password !== confirmation) { showAuthMessage('Les mots de passe ne correspondent pas.', true); return; }
+    const response = await fetch('/api/reset-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: resetToken, password }) });
+    const result = await response.json();
+    showAuthMessage(result.message || result.error, !response.ok);
+    if (response.ok) { resetForm.reset(); resetForm.classList.add('hidden-field'); authForm.classList.remove('hidden-field'); document.querySelector('.auth-links')?.classList.remove('hidden-field'); }
+  });
+}
 
 authForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
   const email = document.getElementById('authEmail').value.trim().toLowerCase();
   const password = document.getElementById('authPassword').value;
-  const confirmPassword = document.getElementById('confirmPassword')?.value;
   if (isRegisterMode) {
-    if (password !== confirmPassword) {
-      showAuthMessage('Les mots de passe ne correspondent pas.', true);
-      return;
-    }
     const registerResponse = await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: document.getElementById('authName').value.trim(), email, password }) });
     const registerResult = await registerResponse.json();
     if (!registerResponse.ok) { showAuthMessage(registerResult.error, true); return; }
-    sessionStorage.setItem('cuistoToken', registerResult.token);
-    showAuthMessage('Compte créé. Accès au site...');
-    window.setTimeout(() => { window.location.href = registerResult.redirect; }, 300);
+    showAuthMessage('Compte créé. Vous pouvez maintenant vous connecter.');
+    isRegisterMode = false;
+    authTitle.textContent = 'Bon retour parmi nous';
+    authSubmit.textContent = 'Se connecter';
+    toggleAuthMode.textContent = 'Créer un compte';
+    profileFields?.classList.add('hidden-field');
+    profileFields?.querySelectorAll('input').forEach((input) => { input.required = false; });
     return;
   }
   const loginResponse = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });

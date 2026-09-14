@@ -10,9 +10,11 @@ const ROOT = __dirname;
 const DATA_DIR = path.join(ROOT, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'cuisto.json');
 const sessions = new Map();
+const passwordResetTokens = new Map();
 const adminEmail = (process.env.ADMIN_EMAIL || 'admin@cuisto.local').toLowerCase();
 const adminPassword = process.env.ADMIN_PASSWORD || 'CuistoAdmin2026!';
 const notificationEmail = process.env.NOTIFICATION_EMAIL || adminEmail;
+const publicUrl = process.env.PUBLIC_URL || `http://localhost:${PORT}`;
 const menuPrices = { 'Riz au gras': 2500, 'Akoumè avec fetri': 2000, 'Akoumè avec adémè': 2000, Pokoumè: 2000, Attiéké: 2500, Veyi: 2000, Spaghetti: 2500, 'Poisson braisé': 3000, 'Riz au poisson': 3000 };
 
 const mailer = process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASSWORD
@@ -68,6 +70,17 @@ function publicUser(user) {
   return { id: user.id, name: user.name, email: user.email, phone: user.phone, address: user.address };
 }
 
+async function sendPasswordResetEmail(user, token) {
+  if (!mailer) return false;
+  await mailer.sendMail({
+    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    to: user.email,
+    subject: 'Réinitialisation de votre mot de passe Cuisto',
+    text: `Bonjour ${user.name},\n\nCliquez sur ce lien pour choisir un nouveau mot de passe :\n${publicUrl}/login.html?reset=${token}\n\nCe lien expire dans 30 minutes.`
+  });
+  return true;
+}
+
 async function sendReservationNotification(reservation) {
   if (!mailer) return;
   const { customer } = reservation;
@@ -121,30 +134,6 @@ async function sendOrderNotification(order) {
   }
 }
 
-async function sendOrderStatusNotification(order) {
-  if (!mailer || !order.customer.email) return;
-  try {
-    await mailer.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
-      to: order.customer.email,
-      subject: `Mise à jour de votre commande Cuisto : ${order.status}`,
-      text: [
-        `Bonjour ${order.customer.name},`,
-        '',
-        `Le statut de votre commande est maintenant : ${order.status}.`,
-        '',
-        `Plats : ${order.items.map((item) => `${item.quantity} x ${item.name}`).join(', ')}`,
-        `Total : ${(order.total || 0).toLocaleString('fr-FR')} FCFA`,
-        '',
-        'Merci de votre confiance.',
-        'Cuisto'
-      ].join('\n')
-    });
-  } catch (error) {
-    console.error(`Notification de statut impossible : ${error.message}`);
-  }
-}
-
 async function handleApi(request, response, url) {
   const data = loadData();
   if (request.method === 'POST' && url.pathname === '/api/contact') {
@@ -179,9 +168,7 @@ async function handleApi(request, response, url) {
     if (data.users.some((user) => user.email === email)) return send(response, 409, { error: 'Cet e-mail est déjà utilisé.' });
     const user = { id: crypto.randomUUID(), name: String(body.name).trim(), email, phone: '', address: '', password: hashPassword(body.password) };
     data.users.push(user); saveData(data);
-    const token = crypto.randomBytes(32).toString('hex');
-    sessions.set(token, user);
-    return send(response, 201, { message: 'Compte créé.', token, redirect: '/index.html' });
+    return send(response, 201, { message: 'Compte créé.' });
   }
   if (request.method === 'POST' && url.pathname === '/api/login') {
     const body = await readBody(request);
@@ -191,7 +178,32 @@ async function handleApi(request, response, url) {
     if (!isAdmin && (!user || !verifyPassword(body.password || '', user.password))) return send(response, 401, { error: 'E-mail ou mot de passe incorrect.' });
     user = isAdmin ? { id: 'admin', name: 'Administrateur', email: adminEmail, role: 'admin' } : user;
     const token = crypto.randomBytes(32).toString('hex'); sessions.set(token, user);
-    return send(response, 200, { token, user: publicUser(user), redirect: isAdmin ? '/admin.html' : '/index.html' });
+    return send(response, 200, { token, user: publicUser(user), redirect: isAdmin ? '/admin.html' : '/index.html#reservation' });
+  }
+  if (request.method === 'POST' && url.pathname === '/api/forgot-password') {
+    const body = await readBody(request);
+    const email = String(body.email || '').trim().toLowerCase();
+    const user = data.users.find((item) => item.email === email);
+    if (user && mailer) {
+      const token = crypto.randomBytes(32).toString('hex');
+      passwordResetTokens.set(token, { userId: user.id, expiresAt: Date.now() + 30 * 60 * 1000 });
+      try { await sendPasswordResetEmail(user, token); } catch (error) { console.error(`Lien de réinitialisation impossible : ${error.message}`); }
+    }
+    return send(response, 200, { message: 'Si cette adresse possède un compte, un lien de réinitialisation a été envoyé.' });
+  }
+  if (request.method === 'POST' && url.pathname === '/api/reset-password') {
+    const body = await readBody(request);
+    const token = String(body.token || '');
+    const reset = passwordResetTokens.get(token);
+    const password = String(body.password || '');
+    if (!reset || reset.expiresAt < Date.now()) return send(response, 400, { error: 'Ce lien est invalide ou expiré.' });
+    if (password.length < 6) return send(response, 400, { error: 'Le mot de passe doit contenir au moins 6 caractères.' });
+    const user = data.users.find((item) => item.id === reset.userId);
+    if (!user) return send(response, 400, { error: 'Compte introuvable.' });
+    user.password = hashPassword(password);
+    saveData(data);
+    passwordResetTokens.delete(token);
+    return send(response, 200, { message: 'Mot de passe modifié. Vous pouvez vous connecter.' });
   }
   if (request.method === 'POST' && url.pathname === '/api/reservations') {
     const user = getUser(request);
@@ -245,11 +257,7 @@ async function handleApi(request, response, url) {
     const id = url.pathname.split('/').pop(); const body = await readBody(request);
     const order = (data.orders || []).find((item) => item.id === id);
     if (!order) return send(response, 404, { error: 'Commande introuvable.' });
-    const previousStatus = order.status;
-    order.status = String(body.status || order.status);
-    saveData(data);
-    if (order.status !== previousStatus) await sendOrderStatusNotification(order);
-    return send(response, 200, { order });
+    order.status = String(body.status || order.status); saveData(data); return send(response, 200, { order });
   }
   if (request.method === 'PATCH' && url.pathname.startsWith('/api/reservations/')) {
     const user = getUser(request);
