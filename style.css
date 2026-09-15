@@ -65,6 +65,10 @@
     font-size: 1rem;
 }
 
+.password-field { position: relative; display: flex; align-items: center; }
+.password-check { display: flex; align-items: center; gap: 8px; margin-top: 8px; color: #006a4e; font-size: 0.9rem; cursor: pointer; }
+.password-check input { width: auto; }
+
 .auth-submit {
     width: 100%;
     margin-top: 24px;
@@ -141,6 +145,9 @@
 .reservation-item { display: grid; grid-template-columns: 1.2fr 1fr 150px; gap: 20px; align-items: center; padding: 20px; background: #fff; border-left: 4px solid #006a4e; border-radius: 10px; box-shadow: 0 8px 22px rgba(0, 106, 78, 0.1); }
 .reservation-item p { margin-top: 5px; color: #666; font-size: 0.9rem; }
 .reservation-item select { padding: 10px; border: 1px solid #ccd2d6; border-radius: 7px; }
+.message-reply-form { display: flex; flex-direction: column; gap: 8px; }
+.message-reply-form textarea { min-height: 80px; padding: 10px; border: 1px solid #ccd2d6; border-radius: 7px; resize: vertical; }
+.message-reply-form .admin-button { align-self: flex-start; }
 
 @media (max-width: 680px) {
     .admin-shell { padding: 0 20px; }
@@ -795,6 +802,9 @@ section{
     
 }
 
+.whatsapp-button { display: block; width: fit-content; margin: 24px auto 0; padding: 12px 20px; border-radius: 8px; background: #006a4e; color: #fff; text-decoration: none; font-weight: 700; }
+.whatsapp-button:hover { background: #004d39; }
+
 .copyright{
     padding: 20px 40px;
     border-top: 2px solid rgba(0,0,0, 0.1);
@@ -841,20 +851,18 @@ header.sticky li a:hover{
 
 @media (max-width: 768px) {
     body {
-        background: linear-gradient(180deg, #1b1b1b 0%, #2e1a0f 100%);
-        display: flex;
-        justify-content: center;
-        align-items: flex-start;
-        padding: 18px;
+        background: #fff;
+        display: block;
+        padding: 0;
     }
 
     .mobile-app-shell {
-        width: min(100%, 430px);
-        min-height: calc(100vh - 36px);
+        width: 100%;
+        min-height: 100vh;
         background: #fff;
-        border-radius: 30px;
-        overflow: hidden;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+        border-radius: 0;
+        overflow: visible;
+        box-shadow: none;
         position: relative;
     }
 
