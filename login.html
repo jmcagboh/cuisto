@@ -21,8 +21,11 @@
             <label for="authEmail">Adresse e-mail</label>
             <input id="authEmail" type="email" autocomplete="email" placeholder="vous@exemple.com" required>
 
-            <label for="authPassword"> Mot de passe</label>
-            <input id="authPassword" type="password" autocomplete="current-password" placeholder="Votre mot de passe" minlength="6" required>
+            <label id="authPasswordLabel" for="authPassword">Mot de passe Cuisto</label>
+            <div class="password-field">
+                <input id="authPassword" type="password" autocomplete="new-password" placeholder="Créez votre mot de passe Cuisto" minlength="6" required>
+            </div>
+            <label class="password-check"><input id="togglePassword" type="checkbox"> Afficher le mot de passe</label>
 
             <button id="authSubmit" class="auth-submit" type="submit">Se connecter</button>
             <p id="authMessage" class="auth-message" role="status" aria-live="polite"></p>

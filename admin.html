@@ -51,8 +51,18 @@
             messageList.innerHTML = result.messages.length ? result.messages.map((item) => `
                 <article class="reservation-item">
                     <div><strong>${item.name}</strong><p>${item.email}</p></div>
-                    <div><p>${item.message}</p><p>${new Date(item.createdAt).toLocaleString('fr-FR')}</p></div>
+                    <div><p>${item.message}</p><p>${new Date(item.createdAt).toLocaleString('fr-FR')}</p>${item.reply ? `<p><strong>Réponse envoyée :</strong> ${item.reply}</p>` : ''}</div>
+                    <form class="message-reply-form" data-id="${item.id}"><textarea placeholder="Votre réponse" required aria-label="Réponse à ${item.name}"></textarea><button class="admin-button" type="submit">Répondre</button><p class="reply-status auth-message" role="status"></p></form>
                 </article>`).join('') : '<p>Aucun message pour le moment.</p>';
+            messageList.querySelectorAll('.message-reply-form').forEach((form) => form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const status = form.querySelector('.reply-status');
+                const response = await fetch(`/api/contact-messages/${form.dataset.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ reply: form.querySelector('textarea').value }) });
+                const result = await response.json();
+                status.textContent = response.ok ? result.message : result.error;
+                status.classList.toggle('error', !response.ok);
+                if (response.ok) form.querySelector('textarea').value = '';
+            }));
         }
         async function loadOrders() {
             const response = await fetch('/api/orders', { headers: { Authorization: `Bearer ${token}` } });

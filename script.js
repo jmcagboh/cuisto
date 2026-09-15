@@ -2,6 +2,9 @@ const contactEmail = 'jeanagboh86@gmail.com';
 const authForm = document.getElementById('authForm');
 const authTitle = document.getElementById('authTitle');
 const authSubmit = document.getElementById('authSubmit');
+const authPasswordLabel = document.getElementById('authPasswordLabel');
+const authPassword = document.getElementById('authPassword');
+const togglePassword = document.getElementById('togglePassword');
 const authMessage = document.getElementById('authMessage');
 const toggleAuthMode = document.getElementById('toggleAuthMode');
 const forgotPassword = document.getElementById('forgotPassword');
@@ -10,6 +13,10 @@ const profileFields = document.getElementById('profileFields');
 const reservationForm = document.getElementById('reservationForm');
 const reservationMessage = document.getElementById('reservationMessage');
 let isRegisterMode = false;
+
+togglePassword?.addEventListener('change', () => {
+  authPassword.type = togglePassword.checked ? 'text' : 'password';
+});
 
 function showAuthMessage(message, isError = false) {
   if (!authMessage) return;
@@ -21,6 +28,9 @@ toggleAuthMode?.addEventListener('click', () => {
   isRegisterMode = !isRegisterMode;
   authTitle.textContent = isRegisterMode ? 'Créer votre compte' : 'Bon retour parmi nous';
   authSubmit.textContent = isRegisterMode ? 'Créer mon compte' : 'Se connecter';
+  authPasswordLabel.textContent = isRegisterMode ? 'Créer votre mot de passe Cuisto' : 'Mot de passe Cuisto';
+  authPassword.placeholder = isRegisterMode ? 'Créez votre mot de passe Cuisto' : 'Votre mot de passe Cuisto';
+  authPassword.autocomplete = isRegisterMode ? 'new-password' : 'current-password';
   toggleAuthMode.textContent = isRegisterMode ? 'J’ai déjà un compte' : 'Créer un compte';
   profileFields?.classList.toggle('hidden-field', !isRegisterMode);
   profileFields?.querySelectorAll('input').forEach((input) => { input.required = isRegisterMode; });

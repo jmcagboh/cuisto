@@ -108,6 +108,68 @@ async function sendReservationNotification(reservation) {
   }
 }
 
+async function sendContactReply(contactMessage, reply) {
+  if (!mailer) return false;
+  await mailer.sendMail({
+    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    to: contactMessage.email,
+    subject: 'Réponse à votre message Cuisto',
+    text: `Bonjour ${contactMessage.name},\n\nVoici la réponse de Cuisto à votre message :\n\n${reply}\n\nVotre message initial :\n${contactMessage.message}\n\nCuisto`
+  });
+  return true;
+}
+
+async function sendReservationReceipt(reservation) {
+  if (!mailer || !reservation.customer.email) return;
+  try {
+    await mailer.sendMail({
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to: reservation.customer.email,
+      subject: 'Confirmation de réception de votre réservation Cuisto',
+      text: [
+        `Bonjour ${reservation.customer.name},`,
+        '',
+        'Nous avons bien reçu votre réservation.',
+        'Elle est actuellement en attente de confirmation par Cuisto.',
+        '',
+        `Date : ${reservation.date}`,
+        `Heure : ${reservation.time}`,
+        `Nombre de personnes : ${reservation.guests}`,
+        `Remarque : ${reservation.note || 'Aucune'}`,
+        '',
+        'Merci de votre confiance.',
+        'Cuisto'
+      ].join('\n')
+    });
+  } catch (error) {
+    console.error(`Confirmation de réservation impossible : ${error.message}`);
+  }
+}
+
+async function sendReservationStatusNotification(reservation) {
+  if (!mailer || !reservation.customer.email) return;
+  try {
+    await mailer.sendMail({
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to: reservation.customer.email,
+      subject: `Mise à jour de votre réservation Cuisto : ${reservation.status}`,
+      text: [
+        `Bonjour ${reservation.customer.name},`,
+        '',
+        `Le statut de votre réservation est maintenant : ${reservation.status}.`,
+        '',
+        `Date : ${reservation.date}`,
+        `Heure : ${reservation.time}`,
+        `Nombre de personnes : ${reservation.guests}`,
+        '',
+        'Cuisto'
+      ].join('\n')
+    });
+  } catch (error) {
+    console.error(`Notification de réservation impossible : ${error.message}`);
+  }
+}
+
 async function sendOrderNotification(order) {
   if (!mailer) return;
   try {
@@ -132,6 +194,56 @@ async function sendOrderNotification(order) {
     });
   } catch (error) {
     console.error(`Notification commande impossible : ${error.message}`);
+  }
+}
+
+async function sendOrderReceipt(order) {
+  if (!mailer || !order.customer.email) return;
+  try {
+    await mailer.sendMail({
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to: order.customer.email,
+      subject: 'Confirmation de réception de votre commande Cuisto',
+      text: [
+        `Bonjour ${order.customer.name},`,
+        '',
+        'Nous avons bien reçu votre commande.',
+        'Elle est actuellement en attente de traitement par Cuisto.',
+        '',
+        `Plats : ${order.items.map((item) => `${item.quantity} x ${item.name}`).join(', ')}`,
+        `Total : ${(order.total || 0).toLocaleString('fr-FR')} FCFA`,
+        `Mode : ${order.fulfillment === 'livraison' ? 'Livraison' : 'À emporter'}`,
+        `Paiement : ${order.paymentMethod === 'sur_place' ? 'Sur place' : 'À la livraison'}`,
+        '',
+        'Merci de votre confiance.',
+        'Cuisto'
+      ].join('\n')
+    });
+  } catch (error) {
+    console.error(`Confirmation de commande impossible : ${error.message}`);
+  }
+}
+
+async function sendOrderStatusNotification(order) {
+  if (!mailer || !order.customer.email) return;
+  try {
+    await mailer.sendMail({
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to: order.customer.email,
+      subject: `Mise à jour de votre commande Cuisto : ${order.status}`,
+      text: [
+        `Bonjour ${order.customer.name},`,
+        '',
+        `Le statut de votre commande est maintenant : ${order.status}.`,
+        '',
+        `Plats : ${order.items.map((item) => `${item.quantity} x ${item.name}`).join(', ')}`,
+        `Total : ${(order.total || 0).toLocaleString('fr-FR')} FCFA`,
+        '',
+        'Cuisto'
+      ].join('\n')
+    });
+  } catch (error) {
+    console.error(`Notification de commande impossible : ${error.message}`);
   }
 }
 
@@ -215,6 +327,7 @@ async function handleApi(request, response, url) {
     data.reservations.push(reservation);
     saveData(data);
     await sendReservationNotification(reservation);
+    await sendReservationReceipt(reservation);
     return send(response, 201, { message: 'Réservation envoyée.' });
   }
   if (request.method === 'POST' && url.pathname === '/api/orders') {
@@ -235,6 +348,7 @@ async function handleApi(request, response, url) {
     data.orders.push(order);
     saveData(data);
     await sendOrderNotification(order);
+    await sendOrderReceipt(order);
     return send(response, 201, { message: 'Commande envoyée.' });
   }
   if (request.method === 'GET' && url.pathname === '/api/reservations') {
@@ -247,6 +361,27 @@ async function handleApi(request, response, url) {
     if (!user || user.role !== 'admin') return send(response, 403, { error: 'Accès administrateur requis.' });
     return send(response, 200, { messages: data.messages || [] });
   }
+  if (request.method === 'POST' && url.pathname.startsWith('/api/contact-messages/')) {
+    const user = getUser(request);
+    if (!user || user.role !== 'admin') return send(response, 403, { error: 'Accès administrateur requis.' });
+    const id = url.pathname.split('/').pop();
+    const contactMessage = (data.messages || []).find((item) => item.id === id);
+    if (!contactMessage) return send(response, 404, { error: 'Message introuvable.' });
+    const body = await readBody(request);
+    const reply = String(body.reply || '').trim();
+    if (!reply) return send(response, 400, { error: 'La réponse ne peut pas être vide.' });
+    if (!mailer) return send(response, 503, { error: 'Le service e-mail n’est pas configuré.' });
+    try {
+      await sendContactReply(contactMessage, reply);
+      contactMessage.reply = reply;
+      contactMessage.repliedAt = new Date().toISOString();
+      saveData(data);
+      return send(response, 200, { message: 'Réponse envoyée.' });
+    } catch (error) {
+      console.error(`Réponse au message impossible : ${error.message}`);
+      return send(response, 502, { error: 'La réponse n’a pas pu être envoyée.' });
+    }
+  }
   if (request.method === 'GET' && url.pathname === '/api/orders') {
     const user = getUser(request);
     if (!user || user.role !== 'admin') return send(response, 403, { error: 'Accès administrateur requis.' });
@@ -258,7 +393,11 @@ async function handleApi(request, response, url) {
     const id = url.pathname.split('/').pop(); const body = await readBody(request);
     const order = (data.orders || []).find((item) => item.id === id);
     if (!order) return send(response, 404, { error: 'Commande introuvable.' });
-    order.status = String(body.status || order.status); saveData(data); return send(response, 200, { order });
+    const previousStatus = order.status;
+    order.status = String(body.status || order.status);
+    saveData(data);
+    if (order.status !== previousStatus) await sendOrderStatusNotification(order);
+    return send(response, 200, { order });
   }
   if (request.method === 'PATCH' && url.pathname.startsWith('/api/reservations/')) {
     const user = getUser(request);
@@ -266,7 +405,11 @@ async function handleApi(request, response, url) {
     const id = url.pathname.split('/').pop(); const body = await readBody(request);
     const reservation = data.reservations.find((item) => item.id === id);
     if (!reservation) return send(response, 404, { error: 'Réservation introuvable.' });
-    reservation.status = String(body.status || reservation.status); saveData(data); return send(response, 200, { reservation });
+    const previousStatus = reservation.status;
+    reservation.status = String(body.status || reservation.status);
+    saveData(data);
+    if (reservation.status !== previousStatus) await sendReservationStatusNotification(reservation);
+    return send(response, 200, { reservation });
   }
   return send(response, 404, { error: 'Route introuvable.' });
 }
