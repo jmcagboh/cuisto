@@ -1,6 +1,6 @@
 // Initialisation de Supabase
 const SUPABASE_URL = 'https://ebvsvfawrpieuikzbkkz.supabase.co';
-const SUPABASE_ANON_KEY = 'VOTRE_CLE_ANON_COPIEE';
+const SUPABASE_ANON_KEY = 'sb_publishable_jvibG6U5sDfmWriZl61HdA_a4aIAdVI';
 
 const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const contactEmail = 'jeanagboh86@gmail.com';
