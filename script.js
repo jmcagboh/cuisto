@@ -1,9 +1,3 @@
-// 1. Vos identifiants
-const SUPABASE_URL = 'https://ebvsvfawrpieuikzbkkz.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_jvibG6U5sDfmWriZl61HdA_a4aIAdVI';
-
-// 2. Initialisation avec un nouveau nom de variable
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const contactEmail = 'jeanagboh86@gmail.com';
 const authForm = document.getElementById('authForm');
 const authTitle = document.getElementById('authTitle');
