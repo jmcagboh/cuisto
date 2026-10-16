@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="animations.css">
+    <title>Connexion | Cuisto</title>
+</head>
+<body class="auth-page">
+    <main class="auth-card">
+        <a class="auth-logo" href="index.html"><span>C</span>uisto</a>
+        <p class="auth-kicker">Espace client</p>
+        <h1 id="authTitle">Bon retour parmi nous</h1>
+        <p class="auth-intro">Connectez-vous pour réserver votre prochain repas.</p>
+
+        <form id="authForm" class="auth-form">
+            <div id="profileFields" class="hidden-field">
+                <label for="authName">Nom complet</label>
+                <input id="authName" type="text" autocomplete="name" placeholder="Votre nom">
+                <label for="authPhone">Téléphone (pour la livraison)</label>
+                <input id="authPhone" type="tel" autocomplete="tel" placeholder="+228 90 00 00 00">
+            </div>
+            <label for="authEmail">Adresse e-mail</label>
+            <input id="authEmail" type="email" autocomplete="email" placeholder="vous@exemple.com" required>
+
+            <label id="authPasswordLabel" for="authPassword">Mot de passe Cuisto</label>
+            <div class="password-field">
+                <input id="authPassword" type="password" autocomplete="new-password" placeholder="Créez votre mot de passe Cuisto" minlength="6" required>
+            </div>
+            <label class="password-check"><input id="togglePassword" type="checkbox"> Afficher le mot de passe</label>
+
+            <button id="authSubmit" class="auth-submit" type="submit">Se connecter</button>
+            <p id="authMessage" class="auth-message" role="status" aria-live="polite"></p>
+        </form>
+
+        <div class="auth-links">
+            <button id="forgotPassword" type="button">Mot de passe oublié ?</button>
+            <button id="toggleAuthMode" type="button">Créer un compte</button>
+        </div>
+        <form id="resetForm" class="auth-form hidden-field">
+            <label for="newPassword">Nouveau mot de passe</label>
+            <input id="newPassword" type="password" minlength="6" placeholder="Au moins 6 caractères" required>
+            <label for="resetConfirmPassword">Confirmer le mot de passe</label>
+            <input id="resetConfirmPassword" type="password" minlength="6" placeholder="Répétez le mot de passe" required>
+            <button class="auth-submit" type="submit">Enregistrer le nouveau mot de passe</button>
+        </form>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

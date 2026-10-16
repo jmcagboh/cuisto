@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="animations.css">
+    <title>Administration | Cuisto</title>
+</head>
+<body class="admin-page">
+    <main class="admin-shell">
+        <header class="admin-header">
+            <a class="auth-logo" href="index.html"><span>C</span>uisto</a>
+            <button id="adminLogout" class="admin-button" type="button">Se déconnecter</button>
+        </header>
+        <section>
+            <p class="auth-kicker">Tableau de bord</p>
+            <h1>Réservations</h1>
+            <p id="adminMessage" class="auth-message" role="status"></p>
+            <div id="reservationList" class="reservation-list">Chargement...</div>
+            <h1>Commandes</h1>
+            <div id="orderList" class="reservation-list">Chargement...</div>
+            <h1>Messages reçus</h1>
+            <div id="messageList" class="reservation-list">Chargement...</div>
+        </section>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script>
+        const { SUPABASE_URL, SUPABASE_ANON_KEY } = window.CUISTO_CONFIG || {};
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const list = document.getElementById('reservationList');
+        const messageList = document.getElementById('messageList');
+        const orderList = document.getElementById('orderList');
+        const message = document.getElementById('adminMessage');
+
+        const RESERVATION_STATUSES = ['En attente', 'Confirmée', 'Annulée'];
+        const ORDER_STATUSES = ['Nouvelle', 'En préparation', 'Prête', 'Livrée', 'Annulée'];
+
+        // Toute valeur venant de la base est échappée avant d'être insérée dans le HTML
+        const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => (
+            { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+        ));
+        const orDash = (value) => (value ? esc(value) : '—');
+
+        function notify(text, isError = false) {
+            message.textContent = text;
+            message.classList.toggle('error', isError);
+        }
+
+        function statusSelect(id, current, statuses, label) {
+            return `<select data-id="${esc(id)}" aria-label="${esc(label)}">${statuses
+                .map((status) => `<option ${status === current ? 'selected' : ''}>${esc(status)}</option>`)
+                .join('')}</select>`;
+        }
+
+        function bindStatusChange(container, table) {
+            container.querySelectorAll('select').forEach((select) => select.addEventListener('change', async () => {
+                const { error } = await sb.from(table).update({ status: select.value }).eq('id', select.dataset.id);
+                notify(error ? 'Mise à jour impossible.' : 'Statut mis à jour.', Boolean(error));
+            }));
+        }
+
+        // Accès réservé : session + rôle admin (vérifié aussi côté base par la RLS)
+        async function guard() {
+            const { data: { session } } = await sb.auth.getSession();
+            if (!session) { window.location.href = 'login.html'; return false; }
+            const { data: profile } = await sb.from('profiles').select('role').eq('id', session.user.id).single();
+            if (!profile || profile.role !== 'admin') {
+                list.textContent = orderList.textContent = messageList.textContent = '';
+                notify('Accès réservé à l’administrateur.', true);
+                window.setTimeout(() => { window.location.href = 'index.html'; }, 1500);
+                return false;
+            }
+            return true;
+        }
+
+        async function loadReservations() {
+            const { data, error } = await sb
+                .from('reservations')
+                .select('id, date, time, guests, note, status, profiles(name, email, phone, address)')
+                .order('created_at', { ascending: false });
+            if (error) { notify('Impossible de charger les réservations.', true); return; }
+            list.innerHTML = data.length ? data.map((r) => {
+                const c = r.profiles || {};
+                return `
+                <article class="reservation-item">
+                    <div><strong>${orDash(c.name)}</strong><p>${orDash(c.email)} · ${orDash(c.phone)}</p><p>${orDash(c.address)}</p></div>
+                    <div><strong>${esc(r.date)} à ${esc(String(r.time).slice(0, 5))}</strong><p>${esc(r.guests)} personne(s)</p><p>${esc(r.note || 'Sans remarque')}</p></div>
+                    ${statusSelect(r.id, r.status, RESERVATION_STATUSES, 'Statut de la réservation')}
+                </article>`;
+            }).join('') : '<p>Aucune réservation pour le moment.</p>';
+            bindStatusChange(list, 'reservations');
+        }
+
+        async function loadOrders() {
+            const { data, error } = await sb
+                .from('orders')
+                .select('id, fulfillment, payment_method, address, latitude, longitude, note, total, status, created_at, profiles(name, email, phone), order_items(name, quantity)')
+                .order('created_at', { ascending: false });
+            if (error) { notify('Impossible de charger les commandes.', true); return; }
+            orderList.innerHTML = data.length ? data.map((o) => {
+                const c = o.profiles || {};
+                const hasPosition = o.latitude !== null && o.longitude !== null;
+                const mapLink = hasPosition
+                    ? `<p><a href="https://www.google.com/maps?q=${Number(o.latitude)},${Number(o.longitude)}" target="_blank" rel="noopener">Voir la position sur Google Maps</a></p>`
+                    : '';
+                const items = (o.order_items || []).map((i) => `${esc(i.quantity)} x ${esc(i.name)}`).join(', ');
+                return `
+                <article class="reservation-item order-item">
+                    <div><strong>${orDash(c.name)}</strong><p>${orDash(c.email)} · ${orDash(c.phone)}</p><p>${o.fulfillment === 'livraison' ? `Livraison : ${orDash(o.address)}` : 'À emporter'}</p><p>Paiement : ${o.payment_method === 'sur_place' ? 'Sur place' : 'À la livraison'}</p>${mapLink}</div>
+                    <div><strong>${items}</strong><p>Total : ${Number(o.total || 0).toLocaleString('fr-FR')} FCFA</p><p>${esc(o.note || 'Sans remarque')}</p><p>${esc(new Date(o.created_at).toLocaleString('fr-FR'))}</p></div>
+                    ${statusSelect(o.id, o.status, ORDER_STATUSES, 'Statut de la commande')}
+                </article>`;
+            }).join('') : '<p>Aucune commande pour le moment.</p>';
+            bindStatusChange(orderList, 'orders');
+        }
+
+        async function loadMessages() {
+            const { data, error } = await sb
+                .from('contact_messages')
+                .select('id, name, email, message, reply, created_at')
+                .order('created_at', { ascending: false });
+            if (error) { notify('Impossible de charger les messages.', true); return; }
+            messageList.innerHTML = data.length ? data.map((m) => `
+                <article class="reservation-item">
+                    <div><strong>${esc(m.name)}</strong><p>${esc(m.email)}</p></div>
+                    <div><p>${esc(m.message)}</p><p>${esc(new Date(m.created_at).toLocaleString('fr-FR'))}</p>${m.reply ? `<p><strong>Réponse enregistrée :</strong> ${esc(m.reply)}</p>` : ''}</div>
+                    <form class="message-reply-form" data-id="${esc(m.id)}"><textarea placeholder="Votre réponse" required aria-label="Réponse à ${esc(m.name)}"></textarea><button class="admin-button" type="submit">Répondre</button></form>
+                </article>`).join('') : '<p>Aucun message pour le moment.</p>';
+            messageList.querySelectorAll('.message-reply-form').forEach((form) => form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const reply = form.querySelector('textarea').value.trim();
+                if (!reply) return;
+                const { error: replyError } = await sb
+                    .from('contact_messages')
+                    .update({ reply, replied_at: new Date().toISOString() })
+                    .eq('id', form.dataset.id);
+                if (replyError) { notify('Réponse non enregistrée.', true); return; }
+                await loadMessages();
+                notify('Réponse enregistrée.');
+            }));
+        }
+
+        document.getElementById('adminLogout').addEventListener('click', async () => {
+            await sb.auth.signOut();
+            window.location.href = 'login.html';
+        });
+
+        guard().then((allowed) => {
+            if (!allowed) return;
+            loadReservations();
+            loadOrders();
+            loadMessages();
+        });
+    </script>
+</body>
+</html>

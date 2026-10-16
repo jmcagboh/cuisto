@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>document.documentElement.classList.add('js');</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="animations.css">
+    <noscript><style>.baniere .contenu h1,.baniere .contenu p,.baniere .contenu .btn1,.baniere .contenu .btn2{opacity:1!important;transform:none!important}</style></noscript>
+
+    <title>Cuisto - Restaurant togolais</title>
+</head>
+<body>
+    <div class="mobile-app-shell">
+        <div class="app-launch" id="appLaunch">
+            <div class="launch-logo">C</div>
+            <p class="launch-tag">Cuisto</p>
+            <h1>Bienvenue chef !</h1>
+            <p>Prêt à tester ton coup de cœur culinaire ?</p>
+            <button id="appStartBtn" class="primary-btn">Jouer</button>
+        </div>
+
+        <header>
+            <a href="#baniere" class ="logo"><span>Cui</span>sto</a>
+            <button class="menuToggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false"></button>
+            <ul class="navbar">
+                <li><a href="#baniere">Accueil</a></li>
+                <li><a href="#apropos">A propos</a></li>
+                <li><a href="#menu">Menu</a></li>
+                <li><a href="#commande">Commander</a></li>
+                <li><a href="#jeu">Jeu</a></li>
+                <li><a href="#expert">Expert</a></li>
+                <li><a href="#contact">Contact</a></li>
+                <li><a href="login.html" class="btn-reserve">Reservation</a></li>
+            </ul>
+        </header>
+        <main class="app-main">
+            <section class="baniere" id="baniere">
+        <div class="contenu">
+           <h1>Une cuisine africaine qui réveille les sens</h1> 
+           <p>Des saveurs authentiques, un accueil chaleureux et un moment gourmand à partager.</p>
+           <a href="#menu" class="btn1">Notre Menu</a>
+           <a href="login.html" class="btn2">Reservation</a>
+
+        </div>
+        <a href="#apropos" class="scroll-hint" aria-label="Descendre vers la suite"><span></span></a>
+    </section>
+    <section class="apropos" id="apropos">
+        <div class="row">
+            <div class="col50">
+                <h2 class="titre-texte">Bienvenue chez <span> Cui</span>sto</h2>
+                <p>"Envie de vraies saveurs locales sans quitter votre confort ?  Chez Cuisto, retrouvez tout l'amour de la cuisine africaine dans votre assiette ! Du savoureux Akoumè à l'incontournable Attiéké, nos chefs préparent vos plats préférés avec authenticité et passion. Que ce soit sur place ou livré chaud directement chez vous, régal garanti. N'attendez plus, commandez et faites voyager vos papilles dès aujourd'hui ! ."
+                </p>
+            </div>
+            <div class="col50">
+                <div class="img">
+                    <img src="./images/photo (3).jpg" alt="image"width=500>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section class="menu" id="menu">
+        <div class="titre">
+            <h2 class="titre-texte"><span>M</span>enu</h2>
+            <p>Découvrez la richesse de la gastronomie africaine à travers nos plats traditionnels soigneusement préparés.</p>
+        </div>
+        <div class="contenu">
+            <div class="box">
+                <div class="imbox">
+                    <img src="./images/photo (2).jpg" alt="">
+                </div>
+                <div class="text">
+                    <h3>Special riz blanc</h3><p class="dish-price">2 500 FCFA</p>
+                </div>
+            </div>
+            <div class="box">
+                <div class="imbox">
+                    <img src="./images/photo (4).jpg" alt="">
+                </div>
+                <div class="text">
+                    <h3>Special koliko</h3><p class="dish-price">2 000 FCFA</p>
+                </div>
+            </div>
+            <div class="box">
+                <div class="imbox">
+                    <img src="./images/photo (5).jpg" alt="">
+                </div>
+                <div class="text">
+                    <h3>Special brochette</h3><p class="dish-price">2 000 FCFA</p>
+                </div>
+            </div>
+            <div class="box">
+                <div class="imbox">
+                    <img src="./images/photo (7).jpg" alt="">
+                </div>
+                <div class="text">
+                    <h3>Special spaghetti</h3><p class="dish-price">2 000 FCFA</p>
+                </div>
+            </div>
+            <div class="box">
+                <div class="imbox">
+                    <img src="./images/photo (6).jpg" alt="">
+                </div>
+                <div class="text">
+                    <h3>Special botokoin</h3><p class="dish-price">2 500 FCFA</p>
+                </div>
+            </div>
+            <div class="box">
+                <div class="imbox">
+                    <img src="./images/photo (8).jpg" alt="">
+                </div>
+                <div class="text">
+                    <h3>Special veyi</h3><p class="dish-price">2 000 FCFA</p>
+                </div>
+            </div>
+            <div class="box">
+                <div class="imbox">
+                    <img src="./images/photo (9).jpg" alt="">
+                </div>
+                <div class="text">
+                    <h3>Special attiékè</h3><p class="dish-price">2 500 FCFA</p>
+                </div>
+            </div>
+            <div class="box">
+                <div class="imbox">
+                    <img src="./images/photo (10).jpg" alt="">
+                </div>
+                <div class="text">
+                    <h3>Special akoumè avec adémè</h3><p class="dish-price">3 000 FCFA</p>
+                </div>
+            </div>
+            <div class="box">
+                <div class="imbox">
+                    <img src="./images/photo (11).jpg" alt="">
+                </div>
+                <div class="text">
+                    <h3>Special pokoumè</h3><p class="dish-price">3 000 FCFA</p>
+                </div>
+            </div>
+            
+        </div>
+        <div class="titre">
+            <a href="#commande" class="btn1">Commander</a>
+        </div>
+    </section>
+        <section class="jeu" id="jeu">
+        <div class="titre">
+            <h2 class="titre-texte"><span>J</span>eu</h2>
+            <p>Testez votre rapidité et trouvez le bon plat avant la fin du temps.</p>
+        </div>
+
+        <div class="game-panel">
+            <div class="game-header">
+                <div class="game-stat">
+                    <span>Score</span>
+                    <strong id="score">0</strong>
+                </div>
+                <div class="game-stat">
+                    <span>Temps</span>
+                    <strong id="timer">30</strong>
+                </div>
+                <div class="game-stat">
+                    <span>Record</span>
+                    <strong id="bestScore">0</strong>
+                </div>
+            </div>
+
+            <div class="objective">
+                <p>Récupérez :</p>
+                <h3 id="targetDish">Clique sur démarrer</h3>
+            </div>
+
+            <div id="gameBoard" class="game-board" aria-live="polite"></div>
+
+            <div class="game-actions">
+                <button id="startGameBtn" class="btn1">Démarrer</button>
+                <p id="gameMessage">Cliquez sur “Démarrer” pour jouer.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="expert" id="expert">
+        <div class="titre">
+            <h2 class="titre-texte"><span>N</span>os Expert</h2>
+            <p>Avec des chefs spécialisés chacun dans des domaines précis.</p>
+        </div>
+        <div class="contenu">
+            <div class="box">
+                <div class="imbox">
+                    <img src="./images/photo11.jpg" alt="">
+                </div>
+                <div class="text">
+                    <h3>Corneille</h3>
+                </div>
+            </div>
+            <div class="box">
+                <div class="imbox">
+                    <img src="./images/photo2.jpg" alt="">
+                </div>
+                <div class="text">
+                    <h3>Yoyo</h3>
+                </div>
+            </div>
+            <div class="box">
+                <div class="imbox">
+                    <img src="./images/photo13.jpg" alt="">
+                </div>
+                <div class="text">
+                    <h3>Kofigo</h3>
+                </div>
+            </div>
+            
+        </div>
+        
+    </section>
+            <section class="temoignage" id="temoignage">
+        <div class="titre blanc">
+            <h2 class="titre-texte">Que Disent Nos <span>C</span>lients</h2>
+            <p>Nous disposons de diverses plats disifiés propre à chaque ethnie qui varies selon les pays specialement ceux de l'Afrique.</p>
+        </div>
+        <div class="contenu">
+            <div class="box">
+                <div class="imbox">
+                    <img src="./images/t1.jpg" alt="" width="90">
+                </div>
+                <div class="text">
+                    <p>Une expérience culinaire tout simplement fantastique chez Cuisto ! 🍲✨</p>
+                    <h3>Kossi</h3>
+                </div>
+            </div>
+            <div class="box">
+                <div class="imbox">
+                    <img src="./images/t2.jpg" alt="" width="90">
+                </div>
+                <div class="text">
+                    <p>Franchement, la meilleure adresse pour retrouver les vraies saveurs d'ici ! Tout est délicieux, bien servi et rapide. Ne cherchez plus où manger, foncez chez Cuisto ! 🙌🔥</p>
+                    <h3>Kokou</h3>
+                </div>
+            </div>
+            <div class="box">
+                <div class="imbox">
+                    <img src="./images/t3.jpg" alt="" width="90">
+                </div>
+                <div class="text">
+                    <p>Une cuisine authentique et savoureuse comme à la maison ! Du bon Akoumè, un Attiéké au top et un poisson braisé bien assaisonné. Service rapide sur place ou en livraison. Allez-y les yeux fermés, vous allez vous régaler ! 🍲✨ </p>
+                    <h3>Kodjo</h3>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section class="commande" id="commande">
+        <div class="titre noir">
+            <h2 class="titre-text"><span>C</span>ommande</h2>
+            <p>Choisissez vos plats, puis indiquez si vous venez les chercher ou si vous souhaitez être livré.</p>
+        </div>
+        <form class="order-form" id="orderForm">
+            <div class="order-items">
+                    <label><span>Riz au gras <strong>2 500 FCFA</strong></span><input type="number" min="0" max="20" value="0" data-price="2500" data-dish="Riz au gras" data-slug="riz-au-gras" aria-label="Quantité Riz au gras"></label>
+                    <label><span>Akoumè avec fetri <strong>2 000 FCFA</strong></span><input type="number" min="0" max="20" value="0" data-price="2000" data-dish="Akoumè avec fetri" data-slug="akoume-fetri" aria-label="Quantité Akoumè avec fetri"></label>
+                    <label><span>Akoumè avec adémè <strong>2 000 FCFA</strong></span><input type="number" min="0" max="20" value="0" data-price="2000" data-dish="Akoumè avec adémè" data-slug="akoume-ademe" aria-label="Quantité Akoumè avec adémè"></label>
+                    <label><span>Pokoumè <strong>2 000 FCFA</strong></span><input type="number" min="0" max="20" value="0" data-price="2000" data-dish="Pokoumè" data-slug="pokoume" aria-label="Quantité Pokoumè"></label>
+                    <label><span>Attiéké <strong>2 500 FCFA</strong></span><input type="number" min="0" max="20" value="0" data-price="2500" data-dish="Attiéké" data-slug="attieke" aria-label="Quantité Attiéké"></label>
+                    <label><span>Veyi <strong>2 000 FCFA</strong></span><input type="number" min="0" max="20" value="0" data-price="2000" data-dish="Veyi" data-slug="veyi" aria-label="Quantité Veyi"></label>
+                    <label><span>Spaghetti <strong>2 500 FCFA</strong></span><input type="number" min="0" max="20" value="0" data-price="2500" data-dish="Spaghetti" data-slug="spaghetti" aria-label="Quantité Spaghetti"></label>
+                    <label><span>Poisson braisé <strong>3 000 FCFA</strong></span><input type="number" min="0" max="20" value="0" data-price="3000" data-dish="Poisson braisé" data-slug="poisson-braise" aria-label="Quantité Poisson braisé"></label>
+                    <label><span>Riz au poisson <strong>3 000 FCFA</strong></span><input type="number" min="0" max="20" value="0" data-price="3000" data-dish="Riz au poisson" data-slug="riz-au-poisson" aria-label="Quantité Riz au poisson"></label>
+            </div>
+                <div class="order-total">Total : <strong id="orderTotal">0 FCFA</strong></div>
+            <div class="order-choice">
+                <label><input type="radio" name="fulfillment" value="emporter" checked> À emporter</label>
+                <label><input type="radio" name="fulfillment" value="livraison"> Livraison</label>
+            </div>
+            <div class="order-choice">
+                <span class="order-choice-title">Mode de paiement</span>
+                <label><input type="radio" name="paymentMethod" value="livraison" checked> Paiement à la livraison</label>
+                <label><input type="radio" name="paymentMethod" value="sur_place"> Paiement sur place</label>
+            </div>
+            <div class="location-tools">
+                <input id="orderAddress" type="text" placeholder="Adresse de livraison" aria-label="Adresse de livraison" disabled>
+                <button id="locationButton" class="location-button" type="button" disabled>Utiliser ma position</button>
+            </div>
+            <input id="orderLatitude" type="hidden">
+            <input id="orderLongitude" type="hidden">
+            <p id="locationMessage" class="location-message" role="status"></p>
+            <textarea id="orderNote" placeholder="Remarque (facultatif)" aria-label="Remarque commande"></textarea>
+            <button class="auth-submit" type="submit">Envoyer la commande</button>
+            <p id="orderMessage" class="auth-message" role="status"></p>
+        </form>
+    </section>
+    <section class="reservation" id="reservation">
+        <div class="titre noir">
+            <h2 class="titre-text"><span>R</span>éservation</h2>
+            <p>Connectez-vous pour réserver une table.</p>
+        </div>
+        <form class="reservation-form" id="reservationForm">
+            <input id="reservationDate" type="date" required aria-label="Date">
+            <input id="reservationTime" type="time" required aria-label="Heure">
+            <input id="reservationGuests" type="number" min="1" max="20" value="2" required aria-label="Nombre de personnes">
+            <textarea id="reservationNote" placeholder="Remarque (facultatif)" aria-label="Remarque"></textarea>
+            <button class="auth-submit" type="submit">Envoyer la réservation</button>
+            <p id="reservationMessage" class="auth-message" role="status"></p>
+        </form>
+    </section>
+    <section class="contact" id="contact">
+        <div class="titre noir">
+            <h2 class="titre-text"><span>C</span>ontact</h2>
+            <p>Pour plus d'information nous sommes joignable à tous moment (24h/7j)</p>
+        </div>
+        <form class="contactform" id="contactForm">
+            <h3>Envoyer un message</h3>
+            <div class="inputboite">
+                <input type="text" id="nameInput" name="name" placeholder="Votre nom" required>
+            </div>
+            <div class="inputboite">
+                <input type="email" id="emailInput" name="email" placeholder="Votre e-mail" required>
+            </div>
+            <div class="inputboite">
+                <textarea id="messageInput" name="message" placeholder="votre message" required></textarea>
+            </div>
+            <div class="inputboite">
+                <input type="submit" value="Envoyer">
+            </div>
+            <p class="contact-status auth-message" role="status"></p>
+        </form>
+        <a class="whatsapp-button" href="https://wa.me/22871645867?text=Bonjour%20Cuisto%2C%20je%20souhaite%20avoir%20des%20informations." target="_blank" rel="noopener">Écrire sur WhatsApp</a>
+    </section>
+
+    <section class="info-bar" aria-label="Horaires et carte">
+        <div class="hours-card">
+            <div class="hours-title">
+                <span class="hours-icon">⏰</span>
+                <h3>Horaires d'ouverture</h3>
+            </div>
+            <ul class="hours-list">
+                <li><span>Lundi - Vendredi</span><strong>10h00 - 22h00</strong></li>
+                <li><span>Samedi</span><strong>10h00 - 23h00</strong></li>
+                <li><span>Dimanche</span><strong>12h00 - 20h00</strong></li>
+            </ul>
+        </div>
+
+        <div class="map-card">
+            <iframe
+                src="https://www.openstreetmap.org/export/embed.html?bbox=1.1827%2C6.1061%2C1.2763%2C6.1838&amp;layer=mapnik&amp;marker=6.1467%2C1.2218"
+                loading="lazy"
+                referrerpolicy="no-referrer-when-downgrade"
+                title="Carte de localisation Cuisto">
+            </iframe>
+        </div>
+    </section>
+
+    <div class="copyright">
+        <p>&copy; 2026 <a href="#baniere">jmc AGBOH</a> projet Cuisto. Tous droits reservés</p>
+    </div>
+        </main>
+    </div>
+    <a href="#baniere" class="scroll-top" aria-label="Retour en haut">↑</a>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+    <script type="text/javascript">
+        const header = document.querySelector('header');
+        const scrollTopBtn = document.querySelector('.scroll-top');
+
+        window.addEventListener('scroll', function () {
+            const scrolled = window.scrollY > 40;
+            header.classList.toggle('sticky', scrolled);
+            header.style.opacity = scrolled ? '1' : '0.96';
+            header.style.transform = scrolled ? 'translateY(0)' : 'translateY(-8px)';
+            if (scrollTopBtn) {
+                scrollTopBtn.classList.toggle('visible', window.scrollY > 300);
+            }
+        });
+    </script>
+
+</body>
+</html>
+
