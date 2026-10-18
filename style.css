@@ -4,7 +4,7 @@
     margin: 0px;
     padding: 0px;
     box-sizing: border-box;
-    font-family: 'Poppins', sans-serif;
+    font-family: calc();
     scroll-behavior: smooth;
  }
  
@@ -140,7 +140,8 @@
 
 .admin-page { background: #f5fbf7; }
 .admin-shell { width: min(100%, 1100px); margin: 0 auto; }
-.admin-header { display: flex; justify-content: space-between; align-items: center; padding: 24px 0; }
+/* <header> hérite du style global (fixe, transparent) : on le neutralise pour le tableau de bord */
+.admin-header { position: static; width: auto; z-index: auto; display: flex; justify-content: space-between; align-items: center; padding: 24px 0; background: transparent; backdrop-filter: none; border-bottom: 0; opacity: 1; transform: none; }
 .admin-button { padding: 10px 16px; border: 0; border-radius: 8px; background: #006a4e; color: #fff; cursor: pointer; }
 .admin-shell > section { padding: 30px 0; }
 .reservation-list { display: grid; gap: 14px; margin-top: 25px; }
@@ -324,6 +325,9 @@ header.sticky .navbar li a {
     list-style: none;
 }
 
+/* Bouton du menu mobile : caché sur ordinateur (affiché dans le @media 768px plus bas) */
+.menuToggle { display: none; }
+
 .navbar a{
     color: #111;
     text-decoration: none;
@@ -361,7 +365,7 @@ header .navbar li a:hover{
     display: flex;
     justify-content: center;
     align-items: center;
-    background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(./images/photo\ \(1\).jpg);
+    background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(./images/acueil.jpg);
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -571,7 +575,8 @@ section{
     padding-right: 10px;
 }
 
-.titre-texte{
+.titre-texte,
+.titre-text{
     color: #000;
     font-size: clamp(2.2rem, 3vw, 3.3rem);
     font-weight: 600;
@@ -580,7 +585,8 @@ section{
     line-height: 1.1;
 }
 
-.titre-texte span{
+.titre-texte span,
+.titre-text span{
     color: #006a4e;
     font-size: 1.08em;
     font-weight: 700;
@@ -648,7 +654,6 @@ section{
 .menu .contenu .box{
     width: 350px;
     margin: 20px;
-    border: 20px solid fff; 
     box-shadow: 20px 15px 35px rgba(0,0,0, 0.8);
 }
 
@@ -669,7 +674,7 @@ section{
 
 .menu .contenu .box .text{
     text-align: center;
-    font-weight: 300px;
+    font-weight: 300;
     color: #111;
 }
 
@@ -851,7 +856,6 @@ section{
 .expert .contenu .box{
     width: 350px;
     margin: 20px;
-    border: 20px solid fff; 
     box-shadow: 20px 15px 35px rgba(0,0,0, 0.8);
 }
 
@@ -872,7 +876,7 @@ section{
 
 .expert .contenu .box .text{
     text-align: center;
-    font-weight: 300px;
+    font-weight: 300;
     color: #111;
 }
 
@@ -939,12 +943,12 @@ section{
 }
 
 .blanc .titre-texte{
-    color: #fff;
+    color: black;
 }
 
 .blanc .titre-texte,
 .blanc p{
-    color: #fff;
+    color: black;
 }
 
 .contact{
@@ -1578,4 +1582,166 @@ header.sticky .menuToggle{
     .temoignage p{
         text-align: center;
     }
+}
+
+
+/* ============================================================
+   Page « Autres plats » (plats.html)
+   ============================================================ */
+.dishes-page { background: #f5fbf7; }
+.dishes-page .mobile-app-shell { background: transparent; }
+
+/* Le style global de <header> est transparent avec un texte blanc (pensé pour le hero) :
+   ici on veut une barre pleine, lisible sur fond clair. */
+.dishes-header {
+    position: sticky;
+    top: 0;
+    left: auto;
+    right: auto;
+    padding: 14px 24px;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+    opacity: 1;
+    transform: none;
+}
+
+.dishes-header .logo { color: #111; }
+.dishes-header .logo span { color: #006a4e; }
+
+.dishes-header .btn-reserve {
+    margin: 0;
+    padding: 10px 22px;
+    color: #fff;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-decoration: none;
+}
+
+.dishes-header .btn-reserve:hover { background: #004d39; }
+
+.more-dishes {
+    width: min(1200px, 100%);
+    margin: 0 auto;
+    padding: 56px 24px 72px;
+}
+
+.more-dishes-heading {
+    max-width: 680px;
+    margin: 0 auto 48px;
+    text-align: center;
+}
+
+.dishes-eyebrow {
+    color: #006a4e;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.more-dishes-heading h1 {
+    margin: 10px 0 14px;
+    color: #111;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(2.4rem, 5vw, 3.6rem);
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.more-dishes-heading p:last-child {
+    color: #444;
+    font-size: 1.05rem;
+    line-height: 1.7;
+}
+
+.other-dish-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+    gap: 28px;
+}
+
+.other-dish {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 15px 35px rgba(42, 73, 99, 0.12);
+}
+
+.other-dish img {
+    display: block;
+    width: 100%;
+    height: 240px;
+    object-fit: cover;
+}
+
+.other-dish-copy {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 8px;
+    padding: 22px 22px 24px;
+}
+
+.other-dish-copy h2 {
+    color: #111;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.dish-description {
+    color: #555;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.other-dish-copy .dish-price {
+    margin-top: auto;
+    padding-top: 6px;
+    color: #006a4e;
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+
+.other-dish-copy a {
+    display: block;
+    margin-top: 8px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: #006a4e;
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    transition: background 0.2s ease;
+}
+
+.other-dish-copy a:hover { background: #004d39; }
+
+.dishes-footer {
+    padding: 28px 24px 40px;
+    text-align: center;
+}
+
+.dishes-footer a {
+    color: #006a4e;
+    font-weight: 600;
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    transition: border-color 0.2s ease;
+}
+
+.dishes-footer a:hover { border-bottom-color: #006a4e; }
+
+@media (max-width: 600px) {
+    .dishes-header { padding: 12px 16px; }
+    .dishes-header .logo { font-size: 1.5em; }
+    .more-dishes { padding: 36px 16px 56px; }
+    .more-dishes-heading { margin-bottom: 32px; }
+    .other-dish img { height: 210px; }
 }
