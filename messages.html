@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Écrivez à Cuisto : commande, réservation ou question. Nous vous répondons sur WhatsApp.">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="animations.css">
+    <title>Messagerie - Cuisto</title>
+</head>
+<body class="chat-page">
+    <div class="mobile-app-shell">
+        <header class="dishes-header">
+            <a href="index.html#baniere" class="logo"><span>Cui</span>sto</a>
+            <a href="index.html" class="btn-reserve">Retour au site</a>
+        </header>
+        <main class="chat-main">
+            <section class="chat-card" aria-label="Messagerie Cuisto">
+                <div class="chat-top">
+                    <span class="chat-avatar" aria-hidden="true">C</span>
+                    <div class="chat-top-text">
+                        <strong>Cuisto</strong>
+                        <small>Réponse sur WhatsApp, 7j/7</small>
+                    </div>
+                    <button id="chatClear" class="chat-clear" type="button">Effacer</button>
+                </div>
+
+                <div id="chatLog" class="chat-log" role="log" aria-live="polite"></div>
+
+                <div id="chatChips" class="chat-chips">
+                    <button class="chat-chip" type="button">Où en est ma commande ?</button>
+                    <button class="chat-chip" type="button">Je souhaite réserver une table</button>
+                    <button class="chat-chip" type="button">Quels plats sont disponibles aujourd'hui ?</button>
+                    <button class="chat-chip" type="button">Je veux modifier ma commande</button>
+                </div>
+
+                <form id="chatForm" class="chat-form">
+                    <input id="chatName" type="text" placeholder="Votre nom" autocomplete="name" required aria-label="Votre nom">
+                    <div class="chat-row">
+                        <textarea id="chatInput" rows="1" placeholder="Écrivez votre demande..." required aria-label="Votre message"></textarea>
+                        <button class="chat-send" type="submit" aria-label="Envoyer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+                    </div>
+                </form>
+                <p class="chat-note">Votre message s'ouvre dans WhatsApp pour l'envoi. La conversation est gardée sur cet appareil.</p>
+            </section>
+        </main>
+    </div>
+    <script src="chat.js"></script>
+</body>
+</html>

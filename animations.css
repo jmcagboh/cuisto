@@ -1,0 +1,314 @@
+/* ============================================================
+   Cuisto — animations
+   À charger APRÈS style.css. Aucune règle de style.css n'est modifiée.
+   Tout est désactivé si l'utilisateur préfère moins de mouvement
+   (voir le bloc prefers-reduced-motion en bas de fichier).
+   ============================================================ */
+
+:root {
+    --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* ---------- Keyframes ---------- */
+@keyframes revealUp    { from { opacity: 0; transform: translateY(32px); }  to { opacity: 1; transform: none; } }
+@keyframes revealLeft  { from { opacity: 0; transform: translateX(-48px); } to { opacity: 1; transform: none; } }
+@keyframes revealRight { from { opacity: 0; transform: translateX(48px); }  to { opacity: 1; transform: none; } }
+@keyframes revealZoom  { from { opacity: 0; transform: scale(0.92); }       to { opacity: 1; transform: none; } }
+@keyframes headerIn    { from { opacity: 0; transform: translateY(-100%); } to { opacity: 1; transform: none; } }
+@keyframes kenburns    { from { transform: scale(1); } to { transform: scale(1.12); } }
+@keyframes shine       { to { background-position: 200% center; } }
+@keyframes fadeIn      { from { opacity: 0; transform: translateY(-4px); }  to { opacity: 1; transform: none; } }
+@keyframes cardPop     { from { opacity: 0; transform: translateY(14px) scale(0.94); } to { opacity: 1; transform: none; } }
+@keyframes pop         { 0% { transform: scale(1); } 40% { transform: scale(1.14); } 100% { transform: scale(1); } }
+@keyframes scrollHint  { 0% { opacity: 0; transform: translateY(-4px); } 40% { opacity: 1; } 100% { opacity: 0; transform: translateY(14px); } }
+@keyframes pulseRing   { 0% { box-shadow: 0 0 0 0 rgba(0, 106, 78, 0.45); } 70% { box-shadow: 0 0 0 12px rgba(0, 106, 78, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 106, 78, 0); } }
+
+/* ---------- En-tête ---------- */
+header {
+    animation: headerIn 0.8s var(--ease-out) backwards;
+}
+
+.navbar .btn-reserve {
+    animation: pulseRing 2.8s ease-out 3s infinite;
+}
+
+/* ---------- Page d'accueil (hero) ---------- */
+/* L'image de fond respire lentement (effet Ken Burns) */
+.baniere {
+    overflow: hidden;
+    isolation: isolate;
+}
+
+.baniere::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: inherit;
+    animation: kenburns 22s ease-in-out infinite alternate;
+    will-change: transform;
+}
+
+/* Le titre apparaît puis reflète la lumière en continu */
+.baniere .contenu.is-visible h1 {
+    background-size: 200% auto;
+    animation:
+        heroReveal 0.9s var(--ease-out) 0.1s forwards,
+        shine 8s linear 1.2s infinite;
+}
+
+/* Les boutons apparaissent, puis flottent doucement */
+.baniere .contenu.is-visible .btn1 {
+    animation:
+        heroReveal 0.9s var(--ease-out) 0.6s forwards,
+        floaty 4s ease-in-out 1.8s infinite;
+}
+
+.baniere .contenu.is-visible .btn2 {
+    animation:
+        heroReveal 0.9s var(--ease-out) 0.8s forwards,
+        floaty 4s ease-in-out 2s infinite;
+}
+
+/* Indicateur « faire défiler » */
+.scroll-hint {
+    position: absolute;
+    left: 50%;
+    bottom: 28px;
+    z-index: 2;
+    width: 26px;
+    height: 44px;
+    margin-left: -13px;
+    border: 2px solid rgba(255, 255, 255, 0.75);
+    border-radius: 16px;
+    opacity: 0;
+    animation: fadeIn 1s ease 2.2s forwards;
+}
+
+.scroll-hint span {
+    position: absolute;
+    left: 50%;
+    top: 8px;
+    width: 4px;
+    height: 8px;
+    margin-left: -2px;
+    border-radius: 2px;
+    background: #fff;
+    animation: scrollHint 1.8s ease-in-out 2.6s infinite;
+}
+
+@media (max-height: 520px) {
+    .scroll-hint { display: none; }
+}
+
+/* ---------- Apparition au défilement ---------- */
+/* Le contenu reste visible si JavaScript est désactivé : tout est conditionné à .js */
+.js .reveal:not(.in-view) {
+    opacity: 0;
+}
+
+.reveal.in-view {
+    animation: revealUp 0.8s var(--ease-out) backwards;
+    animation-delay: calc(var(--i, 0) * 90ms);
+}
+
+.reveal-left.in-view  { animation-name: revealLeft; }
+.reveal-right.in-view { animation-name: revealRight; }
+.reveal-zoom.in-view  { animation-name: revealZoom; }
+
+/* ---------- Cartes : menu, experts, témoignages ---------- */
+.menu .contenu .box,
+.expert .contenu .box,
+.temoignage .contenu .box {
+    transition: transform 0.35s var(--ease-out), box-shadow 0.35s ease;
+}
+
+.menu .contenu .box:hover,
+.expert .contenu .box:hover {
+    transform: translateY(-8px);
+    box-shadow: 20px 26px 45px rgba(0, 0, 0, 0.55);
+}
+
+.temoignage .contenu .box:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.25);
+}
+
+/* ---------- Commande ---------- */
+.order-total strong {
+    display: inline-block;
+}
+
+.order-total strong.bump {
+    animation: pop 0.35s ease;
+}
+
+.order-items label {
+    transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+.order-items label:hover,
+.order-items label:focus-within {
+    border-color: #006a4e;
+    box-shadow: 0 6px 16px rgba(0, 106, 78, 0.15);
+    transform: translateY(-2px);
+}
+
+/* Messages de retour (succès / erreur) */
+.auth-message:not(:empty) {
+    animation: fadeIn 0.4s ease;
+}
+
+/* ---------- Jeu : les cartes « sautent » à chaque manche ---------- */
+.dish-card {
+    animation: cardPop 0.28s var(--ease-out) backwards;
+}
+
+.dish-card:nth-child(2) { animation-delay: 0.04s; }
+.dish-card:nth-child(3) { animation-delay: 0.08s; }
+.dish-card:nth-child(4) { animation-delay: 0.12s; }
+
+/* ---------- Page « Autres plats » ---------- */
+.other-dish {
+    transition: transform 0.35s var(--ease-out), box-shadow 0.35s ease;
+    animation: revealUp 0.7s var(--ease-out) backwards;
+}
+
+.other-dish:nth-child(2) { animation-delay: 0.08s; }
+.other-dish:nth-child(3) { animation-delay: 0.16s; }
+.other-dish:nth-child(4) { animation-delay: 0.24s; }
+.other-dish:nth-child(5) { animation-delay: 0.32s; }
+.other-dish:nth-child(6) { animation-delay: 0.40s; }
+
+.other-dish:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 22px 44px rgba(42, 73, 99, 0.2);
+}
+
+.other-dish img {
+    transition: transform 0.6s var(--ease-out);
+}
+
+.other-dish:hover img {
+    transform: scale(1.06);
+}
+
+/* ---------- Boutons : survol, appui et reflet ---------- */
+@keyframes iconBob     { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes iconWiggle  { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-14deg); } 75% { transform: rotate(14deg); } }
+@keyframes ringGreen   { 0% { box-shadow: 0 0 0 0 rgba(0, 106, 78, 0.45); } 70% { box-shadow: 0 0 0 12px rgba(0, 106, 78, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 106, 78, 0); } }
+@keyframes ringWhatsapp { 0% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.5); } 70% { box-shadow: 0 0 0 14px rgba(37, 211, 102, 0); } 100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); } }
+@keyframes ringInsta   { 0% { box-shadow: 0 0 0 0 rgba(221, 42, 123, 0.45); } 70% { box-shadow: 0 0 0 14px rgba(221, 42, 123, 0); } 100% { box-shadow: 0 0 0 0 rgba(221, 42, 123, 0); } }
+
+.btn1, .btn2, .auth-submit, .location-button, .primary-btn,
+.other-dish-copy a, .contactform .inputboite input[type="submit"] {
+    transition: transform 0.25s var(--ease-out), box-shadow 0.25s ease, background-color 0.25s ease, filter 0.25s ease;
+}
+
+.btn1, .btn2, .auth-submit, .location-button, .other-dish-copy a {
+    position: relative;
+    overflow: hidden;
+}
+
+/* reflet qui traverse le bouton */
+.btn1::after, .btn2::after, .auth-submit::after, .location-button::after, .other-dish-copy a::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
+    transform: translateX(-120%);
+    transition: transform 0.6s ease;
+    pointer-events: none;
+}
+
+.btn1:hover::after, .btn2:hover::after, .auth-submit:hover::after,
+.location-button:not(:disabled):hover::after, .other-dish-copy a:hover::after {
+    transform: translateX(120%);
+}
+
+.btn1:hover, .btn2:hover, .auth-submit:hover, .primary-btn:hover,
+.other-dish-copy a:hover, .contactform .inputboite input[type="submit"]:hover {
+    transform: translateY(-3px) scale(1.04);
+    box-shadow: 0 12px 24px rgba(0, 106, 78, 0.35);
+}
+
+.location-button:not(:disabled):hover {
+    transform: translateY(-2px) scale(1.04);
+    box-shadow: 0 10px 20px rgba(0, 106, 78, 0.3);
+}
+
+.btn1:active, .btn2:active, .auth-submit:active, .primary-btn:active,
+.location-button:not(:disabled):active, .other-dish-copy a:active,
+.contactform .inputboite input[type="submit"]:active {
+    transform: translateY(0) scale(0.96);
+    box-shadow: none;
+}
+
+/* le bouton « Envoyer » du formulaire de contact respire en continu */
+.contactform .inputboite input[type="submit"] { animation: ringGreen 2.8s ease-out 2s infinite; }
+
+/* retour en haut : la flèche rebondit au survol */
+.scroll-top.visible:hover { transform: translateY(-4px) scale(1.08); }
+
+/* ---------- Contact : icônes animées ---------- */
+.info-icon, .hours-icon { transition: transform 0.3s var(--ease-out), box-shadow 0.3s ease; }
+.info-item:nth-child(1) .info-icon { animation: iconBob 3.4s ease-in-out infinite; }
+.info-item:nth-child(2) .info-icon { animation: iconBob 3.4s ease-in-out 0.4s infinite; }
+.info-item:nth-child(3) .info-icon { animation: iconBob 3.4s ease-in-out 0.8s infinite; }
+
+.info-item:hover .info-icon svg,
+.hours-card:hover .hours-icon svg { animation: iconWiggle 0.6s ease; }
+
+.info-item:hover .info-icon,
+.hours-card:hover .hours-icon { transform: scale(1.12); box-shadow: 0 14px 24px rgba(0, 106, 78, 0.38); }
+
+.social-link {
+    transition: transform 0.3s var(--ease-out), filter 0.3s ease;
+}
+
+.social-link.whatsapp  { animation: ringWhatsapp 2.6s ease-out infinite; }
+.social-link.instagram { animation: ringInsta 2.6s ease-out 1.3s infinite; }
+
+.social-link:hover {
+    transform: translateY(-5px) rotate(-8deg) scale(1.12);
+    filter: brightness(1.1);
+}
+
+.social-link:active { transform: scale(0.94); }
+
+/* ---------- Menu cliquable, messagerie ---------- */
+@keyframes typingDot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.5; } 30% { transform: translateY(-5px); opacity: 1; } }
+
+.menu .contenu .box.added { animation: pop 0.4s ease; }
+.order-items label { transition: border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease; }
+
+.chat-fab { animation: ringGreen 2.8s ease-out 1s infinite; transition: transform 0.3s var(--ease-out); }
+.chat-fab:hover { transform: translateY(-4px) scale(1.1); }
+.chat-fab:hover svg { animation: iconWiggle 0.6s ease; }
+
+.chat-chip, .chat-send, .chat-clear { transition: transform 0.2s var(--ease-out), background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease; }
+.chat-chip:hover { transform: translateY(-2px); background: #006a4e; color: #fff; }
+.chat-send:hover { transform: scale(1.1) rotate(-8deg); box-shadow: 0 8px 18px rgba(0, 106, 78, 0.35); }
+.chat-send:active, .chat-chip:active { transform: scale(0.93); }
+
+.msg { animation: cardPop 0.3s var(--ease-out) backwards; }
+.msg.typing i { animation: typingDot 1.1s ease-in-out infinite; }
+.msg.typing i:nth-child(2) { animation-delay: 0.15s; }
+.msg.typing i:nth-child(3) { animation-delay: 0.3s; }
+
+/* ---------- Accessibilité : moins de mouvement ---------- */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        animation-delay: 0ms !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    .js .reveal:not(.in-view) {
+        opacity: 1;
+    }
+}
