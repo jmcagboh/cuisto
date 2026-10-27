@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="animations.css">
+    <title>Administration | Cuisto</title>
+</head>
+<body class="admin-page">
+    <main class="admin-shell">
+        <header class="admin-header">
+            <a class="auth-logo" href="index.html"><span>C</span>uisto</a>
+            <div class="admin-tools">
+                <span id="adminUser" class="admin-user"></span>
+                <span id="adminUpdated" class="admin-updated"></span>
+                <button id="adminRefresh" class="admin-button secondary" type="button">Actualiser</button>
+                <button id="adminLogout" class="admin-button" type="button">Se déconnecter</button>
+            </div>
+        </header>
+
+        <p class="auth-kicker">Tableau de bord</p>
+        <h1 class="admin-title">Demandes des clients</h1>
+        <p id="adminMessage" class="auth-message" role="status" aria-live="polite"></p>
+
+        <div class="admin-block">
+            <h2>Commandes <span id="orderCount" class="count zero">0</span></h2>
+            <div id="orderList" class="record-list"><p class="empty">Chargement...</p></div>
+        </div>
+
+        <div class="admin-block">
+            <h2>Réservations <span id="reservationCount" class="count zero">0</span></h2>
+            <div id="reservationList" class="record-list"><p class="empty">Chargement...</p></div>
+        </div>
+
+        <div class="admin-block">
+            <h2>Messages reçus <span id="messageCount" class="count zero">0</span></h2>
+            <div id="messageList" class="record-list"><p class="empty">Chargement...</p></div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script>
+        const { SUPABASE_URL, SUPABASE_ANON_KEY } = window.CUISTO_CONFIG || {};
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const $ = (id) => document.getElementById(id);
+        const ORDER_STATUSES = ['Nouvelle', 'En préparation', 'Prête', 'Livrée', 'Annulée'];
+        const RESERVATION_STATUSES = ['En attente', 'Confirmée', 'Annulée'];
+        const MESSAGE_STATUSES = ['Nouveau', 'Traité'];
+
+        // Tout ce qui vient de la base est échappé avant d'être inséré dans le HTML
+        const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => (
+            { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+        ));
+        const orDash = (value) => (value ? esc(value) : '—');
+        const dateTime = (iso) => new Date(iso).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+
+        // Numéro togolais à 8 chiffres -> lien WhatsApp (indicatif 228)
+        function whatsappLink(phone) {
+            let digits = String(phone || '').replace(/\D/g, '');
+            if (digits.startsWith('00')) digits = digits.slice(2);
+            if (digits.length === 8) digits = `228${digits}`;
+            return digits ? `https://wa.me/${digits}` : '';
+        }
+
+        function say(text, isError = false) {
+            const node = $('adminMessage');
+            node.textContent = text;
+            node.classList.toggle('error', isError);
+        }
+
+        function statusSelect(table, id, current, statuses, label) {
+            return `<select data-table="${table}" data-id="${esc(id)}" aria-label="${esc(label)}">${statuses
+                .map((s) => `<option ${s === current ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select>`;
+        }
+
+        function setCount(id, total, fresh) {
+            const node = $(id);
+            node.textContent = fresh ? `${fresh} nouv. / ${total}` : String(total);
+            node.classList.toggle('zero', total === 0);
+        }
+
+        /* ---------- accès réservé ---------- */
+        async function guard() {
+            const { data: { session } } = await sb.auth.getSession();
+            if (!session) { window.location.replace('login.html'); return false; }
+            const { data: isAdmin, error } = await sb.rpc('is_admin');
+            if (error || isAdmin !== true) {
+                await sb.auth.signOut();
+                window.location.replace('login.html');
+                return false;
+            }
+            $('adminUser').textContent = session.user.email;
+            return true;
+        }
+
+        /* ---------- chargement ---------- */
+        async function loadOrders() {
+            const { data, error } = await sb.from('orders')
+                .select('id, created_at, customer_name, customer_phone, fulfillment, payment_method, address, latitude, longitude, note, total, status, order_items(name, quantity)')
+                .order('created_at', { ascending: false }).limit(200);
+            if (error) { say('Impossible de charger les commandes.', true); return; }
+            const fresh = data.filter((o) => o.status === 'Nouvelle').length;
+            setCount('orderCount', data.length, fresh);
+            $('orderList').innerHTML = data.length ? data.map((o) => {
+                const wa = whatsappLink(o.customer_phone);
+                const hasPosition = o.latitude !== null && o.longitude !== null;
+                const items = (o.order_items || []).map((i) => `${esc(i.quantity)} x ${esc(i.name)}`).join(', ');
+                return `
+                <article class="record ${o.status === 'Nouvelle' ? 'is-new' : ''}">
+                    <div>
+                        <strong>${orDash(o.customer_name)}</strong>
+                        <p>${orDash(o.customer_phone)}${wa ? ` · <a href="${wa}" target="_blank" rel="noopener">WhatsApp</a>` : ''}</p>
+                        <p>${o.fulfillment === 'livraison' ? `Livraison : ${orDash(o.address)}` : 'À emporter'}</p>
+                        ${hasPosition ? `<p><a href="https://www.google.com/maps?q=${Number(o.latitude)},${Number(o.longitude)}" target="_blank" rel="noopener">Position sur Google Maps</a></p>` : ''}
+                        <p>Paiement : ${o.payment_method === 'sur_place' ? 'sur place' : 'à la livraison'}</p>
+                    </div>
+                    <div>
+                        <strong>${items || '—'}</strong>
+                        <p class="total">Total : ${Number(o.total || 0).toLocaleString('fr-FR')} FCFA</p>
+                        <p>${esc(o.note || 'Sans remarque')}</p>
+                        <p>${esc(dateTime(o.created_at))}</p>
+                    </div>
+                    ${statusSelect('orders', o.id, o.status, ORDER_STATUSES, 'Statut de la commande')}
+                </article>`;
+            }).join('') : '<p class="empty">Aucune commande pour le moment.</p>';
+        }
+
+        async function loadReservations() {
+            const { data, error } = await sb.from('reservations')
+                .select('id, created_at, name, phone, reservation_date, reservation_time, guests, note, status')
+                .order('created_at', { ascending: false }).limit(200);
+            if (error) { say('Impossible de charger les réservations.', true); return; }
+            const fresh = data.filter((r) => r.status === 'En attente').length;
+            setCount('reservationCount', data.length, fresh);
+            $('reservationList').innerHTML = data.length ? data.map((r) => {
+                const wa = whatsappLink(r.phone);
+                const day = new Date(`${r.reservation_date}T00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+                return `
+                <article class="record ${r.status === 'En attente' ? 'is-new' : ''}">
+                    <div>
+                        <strong>${orDash(r.name)}</strong>
+                        <p>${orDash(r.phone)}${wa ? ` · <a href="${wa}" target="_blank" rel="noopener">WhatsApp</a>` : ''}</p>
+                    </div>
+                    <div>
+                        <strong>${esc(day)} à ${esc(String(r.reservation_time).slice(0, 5))}</strong>
+                        <p>${esc(r.guests)} personne(s)</p>
+                        <p>${esc(r.note || 'Sans remarque')}</p>
+                        <p>Reçue le ${esc(dateTime(r.created_at))}</p>
+                    </div>
+                    ${statusSelect('reservations', r.id, r.status, RESERVATION_STATUSES, 'Statut de la réservation')}
+                </article>`;
+            }).join('') : '<p class="empty">Aucune réservation pour le moment.</p>';
+        }
+
+        async function loadMessages() {
+            const { data, error } = await sb.from('contact_messages')
+                .select('id, created_at, name, email, message, status')
+                .order('created_at', { ascending: false }).limit(200);
+            if (error) { say('Impossible de charger les messages.', true); return; }
+            const fresh = data.filter((m) => m.status === 'Nouveau').length;
+            setCount('messageCount', data.length, fresh);
+            $('messageList').innerHTML = data.length ? data.map((m) => `
+                <article class="record ${m.status === 'Nouveau' ? 'is-new' : ''}">
+                    <div>
+                        <strong>${esc(m.name)}</strong>
+                        <p><a href="mailto:${esc(m.email)}?subject=${encodeURIComponent('Votre message à Cuisto')}">${esc(m.email)}</a></p>
+                        <p>${esc(dateTime(m.created_at))}</p>
+                    </div>
+                    <div><p>${esc(m.message)}</p></div>
+                    ${statusSelect('contact_messages', m.id, m.status, MESSAGE_STATUSES, 'Statut du message')}
+                </article>`).join('') : '<p class="empty">Aucun message pour le moment.</p>';
+        }
+
+        async function loadAll() {
+            say('');
+            await Promise.all([loadOrders(), loadReservations(), loadMessages()]);
+            $('adminUpdated').textContent = `Mis à jour à ${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+        }
+
+        /* ---------- changement de statut (un seul écouteur pour toute la page) ---------- */
+        document.addEventListener('change', async (event) => {
+            const select = event.target.closest('select[data-table]');
+            if (!select) return;
+            select.disabled = true;
+            const { data, error } = await sb.from(select.dataset.table)
+                .update({ status: select.value }).eq('id', select.dataset.id).select('id');
+            select.disabled = false;
+            if (error || !data || data.length !== 1) { say('Mise à jour impossible.', true); return; }
+            say('Statut mis à jour.');
+            select.closest('.record')?.classList.remove('is-new');
+        });
+
+        $('adminRefresh').addEventListener('click', loadAll);
+        $('adminLogout').addEventListener('click', async () => {
+            await sb.auth.signOut();
+            window.location.replace('login.html');
+        });
+
+        guard().then((allowed) => {
+            if (!allowed) return;
+            loadAll();
+            // actualisation automatique toutes les 45 s, sauf si une liste déroulante est en cours d'utilisation
+            setInterval(() => { if (!document.activeElement?.matches('select')) loadAll(); }, 45000);
+        });
+    </script>
+</body>
+</html>

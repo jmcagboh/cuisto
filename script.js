@@ -1,6 +1,8 @@
 /* ============================================================
-   Cuisto — site statique (sans base de données)
-   Commande, réservation et contact s'envoient par WhatsApp.
+   Cuisto — site statique + Supabase
+   Commandes, réservations et messages sont enregistrés dans Supabase.
+   Pour commander et réserver, WhatsApp s'ouvre aussi pour prévenir le restaurant ;
+   si l'enregistrement échoue, WhatsApp reste le moyen d'envoi.
    ============================================================ */
 const WHATSAPP_NUMBER = '22871645867';
 
@@ -13,33 +15,87 @@ function setStatus(element, text, isError = false) {
 
 const formatPrice = (value) => `${value.toLocaleString('fr-FR')} FCFA`;
 
-function openWhatsApp(lines) {
+/* ---------- Supabase (clé publique : la sécurité vient des règles RLS) ---------- */
+const { SUPABASE_URL, SUPABASE_ANON_KEY } = window.CUISTO_CONFIG || {};
+const sb = (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
+
+/* ---------- WhatsApp ---------- */
+function whatsappUrl(lines) {
   const text = lines.filter(Boolean).join('\n');
-  const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
-  window.open(url, '_blank', 'noopener');
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
+}
+
+// Le navigateur n'autorise l'ouverture d'un onglet que pendant le clic : on l'ouvre tout de suite
+// (vide), puis on le remplit avec WhatsApp quand l'enregistrement est terminé.
+function reserveWhatsAppTab() {
+  try {
+    const tab = window.open('about:blank', '_blank');
+    if (tab) tab.opener = null;
+    return tab;
+  } catch { return null; }
+}
+
+function finishWithWhatsApp(tab, lines, statusEl, text, isError = false) {
+  const url = whatsappUrl(lines);
+  setStatus(statusEl, text, isError);
+  if (tab && !tab.closed) { tab.location.href = url; return; }
+  // onglet bloqué par le navigateur : on propose un lien
+  const link = document.createElement('a');
+  link.href = url;
+  link.target = '_blank';
+  link.rel = 'noopener';
+  link.textContent = ' Ouvrir WhatsApp';
+  statusEl.append(link);
+}
+
+async function save(action) {
+  if (!sb) return false;
+  try {
+    const { error } = await action();
+    if (error) console.error('Enregistrement impossible :', error.message);
+    return !error;
+  } catch (error) {
+    console.error('Enregistrement impossible :', error);
+    return false;
+  }
 }
 
 /* ---------- réservation ---------- */
 const reservationForm = document.getElementById('reservationForm');
 const reservationMessage = document.getElementById('reservationMessage');
 
-reservationForm?.addEventListener('submit', (event) => {
+reservationForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
+  const submit = reservationForm.querySelector('[type="submit"]');
   const name = document.getElementById('reservationName').value.trim();
+  const phone = document.getElementById('reservationPhone').value.trim();
   const date = document.getElementById('reservationDate').value;
   const time = document.getElementById('reservationTime').value;
   const guests = Number(document.getElementById('reservationGuests').value) || 1;
   const note = document.getElementById('reservationNote').value.trim();
 
-  openWhatsApp([
+  const tab = reserveWhatsAppTab();
+  submit.disabled = true;
+  setStatus(reservationMessage, 'Envoi en cours...');
+
+  const saved = await save(() => sb.from('reservations').insert({
+    name, phone, reservation_date: date, reservation_time: time, guests, note: note || null
+  }));
+  submit.disabled = false;
+
+  finishWithWhatsApp(tab, [
     'Bonjour Cuisto, je souhaite réserver une table.',
     `Nom : ${name}`,
-    `Date : ${new Date(date).toLocaleDateString('fr-FR')}`,
+    `Téléphone : ${phone}`,
+    `Date : ${new Date(`${date}T00:00`).toLocaleDateString('fr-FR')}`,
     `Heure : ${time}`,
     `Personnes : ${guests}`,
     note && `Remarque : ${note}`
-  ]);
-  setStatus(reservationMessage, 'WhatsApp s’ouvre : envoyez le message pour finaliser la réservation.');
+  ], reservationMessage, saved
+    ? 'Réservation enregistrée ✓ WhatsApp s’ouvre : envoyez le message pour la confirmer.'
+    : 'Enregistrement impossible pour le moment : envoyez votre réservation par WhatsApp.', !saved);
   reservationForm.reset();
 });
 
@@ -103,19 +159,25 @@ locationButton?.addEventListener('click', () => {
   );
 });
 
-orderForm?.addEventListener('submit', (event) => {
+orderForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
 
   const items = [...orderForm.querySelectorAll('[data-dish]')]
-    .map((input) => ({ name: input.dataset.dish, price: Number(input.dataset.price), quantity: Number(input.value) || 0 }))
+    .map((input) => ({
+      slug: input.dataset.slug,
+      name: input.dataset.dish,
+      price: Number(input.dataset.price),
+      quantity: Number(input.value) || 0
+    }))
     .filter((item) => item.quantity > 0);
   if (!items.length) { setStatus(orderMessage, 'Choisissez au moins un plat.', true); return; }
 
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const isDelivery = orderForm.querySelector('input[name="fulfillment"]:checked').value === 'livraison';
-  const payment = orderForm.querySelector('input[name="paymentMethod"]:checked').value === 'sur_place'
-    ? 'Paiement sur place'
-    : 'Paiement à la livraison';
+  const fulfillment = orderForm.querySelector('input[name="fulfillment"]:checked').value;
+  const paymentMethod = orderForm.querySelector('input[name="paymentMethod"]:checked').value;
+  const isDelivery = fulfillment === 'livraison';
+  const name = document.getElementById('orderName').value.trim();
+  const phone = document.getElementById('orderPhone').value.trim();
   const address = orderAddress.value.trim();
   const hasPosition = orderLatitude.value && orderLongitude.value;
   const note = document.getElementById('orderNote').value.trim();
@@ -125,18 +187,39 @@ orderForm?.addEventListener('submit', (event) => {
     return;
   }
 
-  openWhatsApp([
+  const submit = orderForm.querySelector('[type="submit"]');
+  const tab = reserveWhatsAppTab();
+  submit.disabled = true;
+  setStatus(orderMessage, 'Envoi en cours...');
+
+  // Le prix est recalculé côté base à partir du plat (slug) : seuls plat et quantité sont envoyés
+  const saved = await save(() => sb.rpc('create_order', {
+    p_name: name,
+    p_phone: phone,
+    p_items: items.map(({ slug, quantity }) => ({ slug, quantity })),
+    p_fulfillment: fulfillment,
+    p_payment: paymentMethod,
+    p_address: address || null,
+    p_lat: hasPosition ? Number(orderLatitude.value) : null,
+    p_lng: hasPosition ? Number(orderLongitude.value) : null,
+    p_note: note || null
+  }));
+  submit.disabled = false;
+
+  finishWithWhatsApp(tab, [
     'Bonjour Cuisto, je souhaite passer une commande :',
     ...items.map((item) => `- ${item.quantity} x ${item.name} (${formatPrice(item.price * item.quantity)})`),
     `Total : ${formatPrice(total)}`,
     isDelivery ? 'Mode : Livraison' : 'Mode : À emporter',
-    payment,
+    paymentMethod === 'sur_place' ? 'Paiement sur place' : 'Paiement à la livraison',
+    `Client : ${name} (${phone})`,
     isDelivery && address && `Adresse : ${address}`,
     isDelivery && hasPosition && `Position : https://www.google.com/maps?q=${orderLatitude.value},${orderLongitude.value}`,
     note && `Remarque : ${note}`
-  ]);
+  ], orderMessage, saved
+    ? 'Commande enregistrée ✓ WhatsApp s’ouvre : envoyez le message pour la valider.'
+    : 'Enregistrement impossible pour le moment : envoyez votre commande par WhatsApp.', !saved);
 
-  setStatus(orderMessage, 'WhatsApp s’ouvre : envoyez le message pour valider votre commande.');
   orderForm.reset();
   orderAddress.disabled = true;
   orderAddress.required = false;
@@ -202,32 +285,29 @@ function showToast(text) {
 /* ---------- message de contact ---------- */
 const contactForm = document.getElementById('contactForm');
 
-contactForm?.addEventListener('submit', (event) => {
+contactForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
   const status = contactForm.querySelector('.contact-status');
+  const submit = contactForm.querySelector('[type="submit"]');
   const name = document.getElementById('nameInput')?.value.trim() || 'Client';
   const email = document.getElementById('emailInput')?.value.trim() || '';
   const message = document.getElementById('messageInput')?.value.trim() || '';
   if (!email || !message) return;
 
-  openWhatsApp([
-    'Bonjour Cuisto,',
-    message,
-    `— ${name} (${email})`
-  ]);
-  setStatus(status, 'WhatsApp s’ouvre : envoyez le message pour nous joindre.');
-  contactForm.reset();
+  submit.disabled = true;
+  setStatus(status, 'Envoi en cours...');
+  const saved = await save(() => sb.from('contact_messages').insert({ name, email, message }));
+  submit.disabled = false;
+
+  if (saved) {
+    setStatus(status, 'Message envoyé ✓ Nous vous répondons rapidement.');
+    contactForm.reset();
+    return;
+  }
+  // secours : WhatsApp (lien cliquable, car le navigateur bloquerait une ouverture automatique)
+  finishWithWhatsApp(null, ['Bonjour Cuisto,', message, `— ${name} (${email})`], status,
+    'Envoi impossible pour le moment : écrivez-nous par WhatsApp.', true);
 });
-
-/* ---------- carte : verrouillée tant qu'on n'a pas cliqué dessus ---------- */
-const mapCard = document.getElementById('mapCard');
-const mapOverlay = document.getElementById('mapOverlay');
-const lockMap = () => mapCard?.classList.remove('unlocked');
-
-mapOverlay?.addEventListener('click', () => mapCard.classList.add('unlocked'));
-mapCard?.addEventListener('mouseleave', lockMap);
-document.addEventListener('click', (event) => { if (mapCard && !mapCard.contains(event.target)) lockMap(); });
-document.addEventListener('keydown', (event) => { if (event.key === 'Escape') lockMap(); });
 
 /* ---------- menu mobile ---------- */
 const menuToggle = document.querySelector('.menuToggle');

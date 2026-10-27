@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="animations.css">
+    <title>Connexion | Cuisto</title>
+</head>
+<body class="auth-page">
+    <main class="auth-card">
+        <a class="auth-logo" href="index.html"><span>C</span>uisto</a>
+        <p class="auth-kicker">Espace administrateur</p>
+        <h1>Connexion</h1>
+        <p class="auth-intro">Accès réservé à l'équipe Cuisto.</p>
+
+        <form id="loginForm" class="auth-form">
+            <label for="loginEmail">Adresse e-mail</label>
+            <input id="loginEmail" type="email" autocomplete="email" placeholder="vous@exemple.com" required>
+
+            <label for="loginPassword">Mot de passe</label>
+            <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Votre mot de passe" required>
+            <label class="password-check"><input id="togglePassword" type="checkbox"> Afficher le mot de passe</label>
+
+            <button id="loginSubmit" class="auth-submit" type="submit">Se connecter</button>
+        </form>
+        <p id="loginMessage" class="auth-message" role="status" aria-live="polite"></p>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script>
+        const { SUPABASE_URL, SUPABASE_ANON_KEY } = window.CUISTO_CONFIG || {};
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const form = document.getElementById('loginForm');
+        const submit = document.getElementById('loginSubmit');
+        const message = document.getElementById('loginMessage');
+        const password = document.getElementById('loginPassword');
+
+        function say(text, isError = false) {
+            message.textContent = text;
+            message.classList.toggle('error', isError);
+        }
+
+        document.getElementById('togglePassword').addEventListener('change', (event) => {
+            password.type = event.target.checked ? 'text' : 'password';
+        });
+
+        // Déjà connecté en tant qu'admin : on va directement au tableau de bord
+        (async () => {
+            const { data: { session } } = await sb.auth.getSession();
+            if (!session) return;
+            const { data: isAdmin } = await sb.rpc('is_admin');
+            if (isAdmin === true) window.location.replace('admin.html');
+        })();
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            submit.disabled = true;
+            say('Connexion...');
+
+            const { error } = await sb.auth.signInWithPassword({
+                email: document.getElementById('loginEmail').value.trim().toLowerCase(),
+                password: password.value
+            });
+            if (error) {
+                const tooMany = /rate limit|too many|security purposes/i.test(error.message);
+                say(tooMany ? 'Trop de tentatives. Réessayez dans quelques minutes.' : 'E-mail ou mot de passe incorrect.', true);
+                submit.disabled = false;
+                return;
+            }
+
+            const { data: isAdmin } = await sb.rpc('is_admin');
+            if (isAdmin !== true) {
+                await sb.auth.signOut();
+                say('Ce compte n’a pas accès à l’administration.', true);
+                submit.disabled = false;
+                return;
+            }
+            say('Connexion réussie. Redirection...');
+            window.location.replace('admin.html');
+        });
+    </script>
+</body>
+</html>
