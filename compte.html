@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="animations.css">
+    <title>Mon compte | Cuisto</title>
+</head>
+<body class="auth-page account-page">
+    <main class="auth-card account-card">
+        <a class="auth-logo" href="index.html"><span>C</span>uisto</a>
+
+        <!-- ===== Visiteur : connexion / inscription ===== -->
+        <section id="guestView" class="account-view" hidden>
+            <p class="auth-kicker">Espace client</p>
+            <h1>Mon compte</h1>
+            <p class="auth-intro">Retrouvez vos commandes et réservations, et commandez plus vite. Le compte est facultatif : vous pouvez toujours commander sans.</p>
+
+            <div class="account-tabs" role="tablist">
+                <button id="tabLogin" class="account-tab active" type="button" role="tab" aria-selected="true">Connexion</button>
+                <button id="tabSignup" class="account-tab" type="button" role="tab" aria-selected="false">Créer un compte</button>
+            </div>
+
+            <form id="loginForm" class="auth-form">
+                <label for="loginEmail">Adresse e-mail</label>
+                <input id="loginEmail" type="email" autocomplete="email" placeholder="vous@exemple.com" required>
+                <label for="loginPassword">Mot de passe</label>
+                <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Votre mot de passe" required>
+                <button class="auth-submit" type="submit">Se connecter</button>
+                <button id="forgotPassword" class="account-link" type="button">Mot de passe oublié ?</button>
+            </form>
+
+            <form id="signupForm" class="auth-form" hidden>
+                <label for="signupName">Nom complet</label>
+                <input id="signupName" type="text" autocomplete="name" placeholder="Votre nom" minlength="2" maxlength="80" required>
+                <label for="signupPhone">Téléphone</label>
+                <input id="signupPhone" type="tel" autocomplete="tel" placeholder="Ex : 90 00 00 00" minlength="6" maxlength="20" required>
+                <label for="signupEmail">Adresse e-mail</label>
+                <input id="signupEmail" type="email" autocomplete="email" placeholder="vous@exemple.com" required>
+                <label for="signupPassword">Mot de passe (8 caractères minimum)</label>
+                <input id="signupPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Choisissez un mot de passe" required>
+                <button class="auth-submit" type="submit">Créer mon compte</button>
+            </form>
+        </section>
+
+        <!-- ===== Client connecté ===== -->
+        <section id="userView" class="account-view" hidden>
+            <p class="auth-kicker">Espace client</p>
+            <h1 id="welcome">Bonjour</h1>
+            <p id="userEmail" class="auth-intro"></p>
+
+            <form id="profileForm" class="auth-form profile-form">
+                <label for="profileName">Nom</label>
+                <input id="profileName" type="text" autocomplete="name" minlength="2" maxlength="80" required>
+                <label for="profilePhone">Téléphone</label>
+                <input id="profilePhone" type="tel" autocomplete="tel" minlength="6" maxlength="20" required>
+                <button class="auth-submit" type="submit">Enregistrer mes informations</button>
+            </form>
+
+            <h2 class="history-title">Mes commandes <span id="ordersCount" class="count zero">0</span></h2>
+            <div id="ordersList" class="history-list"><p class="empty">Chargement...</p></div>
+
+            <h2 class="history-title">Mes réservations <span id="reservationsCount" class="count zero">0</span></h2>
+            <div id="reservationsList" class="history-list"><p class="empty">Chargement...</p></div>
+
+            <div class="account-actions">
+                <a class="admin-button secondary" href="index.html#commande">Commander</a>
+                <a id="adminLink" class="admin-button secondary" href="admin.html" hidden>Administration</a>
+                <button id="logoutButton" class="admin-button" type="button">Se déconnecter</button>
+            </div>
+        </section>
+
+        <p id="accountMessage" class="auth-message" role="status" aria-live="polite"></p>
+        <p class="account-back"><a href="index.html">← Retour au site</a></p>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="account.js"></script>
+</body>
+</html>
