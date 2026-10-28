@@ -21,6 +21,28 @@ const sb = (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY)
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null;
 
+/* ---------- compte client (facultatif) : bouton du menu + préremplissage ---------- */
+async function applyAccount() {
+  if (!sb) return;
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) return;
+    const meta = session.user.user_metadata || {};
+    const first = (meta.full_name || '').split(' ')[0];
+    const nav = document.getElementById('navAccount');
+    if (nav) nav.textContent = first ? `Bonjour ${first}` : 'Mon compte';
+    const fill = (id, value) => {
+      const field = document.getElementById(id);
+      if (field && value && !field.value) field.value = value;
+    };
+    fill('orderName', meta.full_name);
+    fill('orderPhone', meta.phone);
+    fill('reservationName', meta.full_name);
+    fill('reservationPhone', meta.phone);
+  } catch (error) { console.error(error); }
+}
+applyAccount();
+
 /* ---------- WhatsApp ---------- */
 function whatsappUrl(lines) {
   const text = lines.filter(Boolean).join('\n');

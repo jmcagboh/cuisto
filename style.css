@@ -2092,3 +2092,53 @@ header.sticky .menuToggle.active { background-color: rgba(0, 106, 78, 0.22); }
     .record { grid-template-columns: 1fr; }
     .auth-card { padding: 30px 22px; }
 }
+
+
+
+/* ============================================================
+   Page compte.html (espace client)
+   ============================================================ */
+.account-card { width: min(100%, 620px); }
+.account-view { padding: 0; }
+.account-view[hidden], .auth-form[hidden] { display: none; }
+.account-tabs { display: flex; gap: 6px; padding: 5px; margin-bottom: 8px; background: #eaf5ef; border-radius: 12px; }
+.account-tab {
+    flex: 1;
+    padding: 11px 10px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: #006a4e;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+.account-tab.active { background: #006a4e; color: #fff; }
+.account-link { display: block; margin: 14px auto 0; border: 0; background: none; color: #006a4e; text-decoration: underline; cursor: pointer; }
+.profile-form { margin-bottom: 8px; }
+.history-title { margin: 32px 0 12px; color: #111; font-size: 1.2rem; }
+.history-list { display: grid; gap: 10px; }
+.history-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 14px 16px;
+    border: 1px solid #e3e8e5;
+    border-radius: 12px;
+    background: #f8fbf9;
+}
+.history-item p { margin-top: 4px; color: #666; font-size: 0.9rem; }
+.history-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; text-align: right; }
+.badge { padding: 3px 10px; border-radius: 999px; background: #c9f6eb; color: #006a4e; font-size: 0.8rem; font-weight: 600; }
+.account-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 30px; }
+.account-actions a { text-decoration: none; }
+.account-back { margin-top: 10px; text-align: center; }
+.account-back a { color: #006a4e; text-decoration: none; }
+@media (max-width: 760px) {
+    .history-item { flex-direction: column; }
+    .history-side { flex-direction: row; align-items: center; justify-content: space-between; }
+}
+
+/* Bouton « Mon compte » du menu */
+.navbar .nav-account { font-weight: 600; }
