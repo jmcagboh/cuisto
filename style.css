@@ -2142,3 +2142,48 @@ header.sticky .menuToggle.active { background-color: rgba(0, 106, 78, 0.22); }
 
 /* Bouton « Mon compte » du menu */
 .navbar .nav-account { font-weight: 600; }
+
+/* Mobile : pas de flèche « retour en haut » */
+@media (max-width: 768px) {
+    .scroll-top { display: none; }
+}
+
+/* Messagerie : bandeau d'invitation à se connecter */
+.chat-banner { padding: 10px 16px; background: #eaf5ef; color: #0f2b23; font-size: 0.88rem; text-align: center; }
+.chat-banner[hidden] { display: none; }
+.chat-banner a { color: #006a4e; font-weight: 700; }
+.chat-form input[hidden], .chat-clear[hidden] { display: none; }
+
+/* Administration : messagerie clients */
+.convo-list { display: grid; gap: 12px; margin-top: 18px; }
+.convo { background: #fff; border-left: 4px solid #b9d9cd; border-radius: 10px; box-shadow: 0 8px 22px rgba(0, 106, 78, 0.08); overflow: hidden; }
+.convo.is-new { border-left-color: #006a4e; background: #f2fbf7; }
+.convo-head {
+    display: grid;
+    grid-template-columns: 180px 1fr auto;
+    gap: 14px;
+    align-items: center;
+    width: 100%;
+    padding: 16px 20px;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+}
+.convo-head span { color: #555; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.convo-head small { color: #777; }
+.convo .tag { padding: 2px 8px; border-radius: 999px; background: #006a4e; color: #fff; font-size: 0.75rem; font-style: normal; }
+.convo-body { padding: 0 20px 18px; }
+.convo-body[hidden] { display: none; }
+.convo-log { display: flex; flex-direction: column; gap: 8px; max-height: 320px; padding: 12px; overflow-y: auto; border-radius: 10px; background: #f3f8f5; }
+.convo-msg { max-width: 80%; padding: 8px 12px; border-radius: 14px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.convo-msg small { display: block; margin-top: 3px; font-size: 0.7rem; opacity: 0.7; }
+.convo-msg.client { align-self: flex-start; background: #fff; color: #111; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06); }
+.convo-msg.admin { align-self: flex-end; background: #006a4e; color: #fff; }
+.convo-reply { display: flex; gap: 10px; align-items: flex-end; margin-top: 12px; }
+.convo-reply textarea { flex: 1; padding: 10px; border: 1px solid #ccd2d6; border-radius: 8px; font: inherit; resize: vertical; }
+@media (max-width: 760px) {
+    .convo-head { grid-template-columns: 1fr; gap: 4px; }
+    .convo-reply { flex-direction: column; align-items: stretch; }
+}

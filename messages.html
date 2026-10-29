@@ -20,10 +20,12 @@
                     <span class="chat-avatar" aria-hidden="true">C</span>
                     <div class="chat-top-text">
                         <strong>Cuisto</strong>
-                        <small>Réponse sur WhatsApp, 7j/7</small>
+                        <small id="chatSubtitle">Réponse sur WhatsApp, 7j/7</small>
                     </div>
                     <button id="chatClear" class="chat-clear" type="button">Effacer</button>
                 </div>
+
+                <p id="chatBanner" class="chat-banner" hidden>Connectez-vous pour discuter directement avec nous, sans passer par WhatsApp. <a href="compte.html">Mon compte</a></p>
 
                 <div id="chatLog" class="chat-log" role="log" aria-live="polite"></div>
 
@@ -41,10 +43,12 @@
                         <button class="chat-send" type="submit" aria-label="Envoyer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
                     </div>
                 </form>
-                <p class="chat-note">Votre message s'ouvre dans WhatsApp pour l'envoi. La conversation est gardée sur cet appareil.</p>
+                <p id="chatNote" class="chat-note">Votre message s'ouvre dans WhatsApp pour l'envoi. La conversation est gardée sur cet appareil.</p>
             </section>
         </main>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
     <script src="chat.js"></script>
 </body>
 </html>

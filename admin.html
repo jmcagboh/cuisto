@@ -35,6 +35,11 @@
         </div>
 
         <div class="admin-block">
+            <h2>Messagerie clients <span id="chatCount" class="count zero">0</span></h2>
+            <div id="chatList" class="convo-list"><p class="empty">Chargement...</p></div>
+        </div>
+
+        <div class="admin-block">
             <h2>Messages reçus <span id="messageCount" class="count zero">0</span></h2>
             <div id="messageList" class="record-list"><p class="empty">Chargement...</p></div>
         </div>
@@ -175,9 +180,99 @@
                 </article>`).join('') : '<p class="empty">Aucun message pour le moment.</p>';
         }
 
+
+        /* ---------- messagerie clients ---------- */
+        const drafts = new Map();     // brouillons de réponse conservés pendant les actualisations
+        const openChats = new Set();  // conversations dépliées
+
+        async function loadChats() {
+            const { data, error } = await sb.from('chat_messages')
+                .select('id, created_at, user_id, sender, user_name, body')
+                .order('created_at', { ascending: false }).limit(500);
+            if (error) { say('Impossible de charger la messagerie.', true); return; }
+
+            const byUser = new Map();
+            data.forEach((m) => {                       // du plus récent au plus ancien
+                if (!byUser.has(m.user_id)) byUser.set(m.user_id, { id: m.user_id, name: '', last: m, messages: [] });
+                const convo = byUser.get(m.user_id);
+                convo.messages.unshift(m);              // on remet dans l'ordre chronologique
+                if (!convo.name && m.sender === 'client' && m.user_name) convo.name = m.user_name;
+            });
+            const convos = [...byUser.values()];
+            const waiting = convos.filter((c) => c.last.sender === 'client').length;
+            setCount('chatCount', convos.length, waiting);
+
+            $('chatList').innerHTML = convos.length ? convos.map((c) => {
+                const needsReply = c.last.sender === 'client';
+                const shown = c.messages.slice(-30).map((m) => `
+                    <div class="convo-msg ${m.sender}"><span>${esc(m.body)}</span><small>${esc(dateTime(m.created_at))}</small></div>`).join('');
+                return `
+                <article class="convo ${needsReply ? 'is-new' : ''}" data-user="${esc(c.id)}">
+                    <button class="convo-head" type="button" aria-expanded="${openChats.has(c.id)}">
+                        <strong>${orDash(c.name || 'Client')}</strong>
+                        <span>${needsReply ? '<em class="tag">À répondre</em> ' : ''}${esc(c.last.body.slice(0, 70))}</span>
+                        <small>${esc(dateTime(c.last.created_at))}</small>
+                    </button>
+                    <div class="convo-body" ${openChats.has(c.id) ? '' : 'hidden'}>
+                        <div class="convo-log">${shown}</div>
+                        <form class="convo-reply" data-user="${esc(c.id)}">
+                            <textarea rows="2" maxlength="1000" placeholder="Votre réponse..." aria-label="Réponse" required>${esc(drafts.get(c.id) || '')}</textarea>
+                            <button class="admin-button" type="submit">Envoyer</button>
+                        </form>
+                    </div>
+                </article>`;
+            }).join('') : '<p class="empty">Aucune conversation pour le moment.</p>';
+
+            document.querySelectorAll('.convo-log').forEach((log) => { log.scrollTop = log.scrollHeight; });
+        }
+
+        // ouvrir / fermer une conversation
+        $('chatList').addEventListener('click', (event) => {
+            const head = event.target.closest('.convo-head');
+            if (!head) return;
+            const convo = head.closest('.convo');
+            const body = convo.querySelector('.convo-body');
+            const open = body.hidden;
+            body.hidden = !open;
+            head.setAttribute('aria-expanded', String(open));
+            if (open) { openChats.add(convo.dataset.user); body.querySelector('.convo-log').scrollTop = 1e9; body.querySelector('textarea').focus(); }
+            else openChats.delete(convo.dataset.user);
+        });
+
+        $('chatList').addEventListener('input', (event) => {
+            const box = event.target.closest('.convo-reply textarea');
+            if (box) drafts.set(box.closest('.convo-reply').dataset.user, box.value);
+        });
+
+        // Entrée envoie, Maj+Entrée = nouvelle ligne
+        $('chatList').addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !event.shiftKey && event.target.matches('.convo-reply textarea')) {
+                event.preventDefault();
+                event.target.closest('form').requestSubmit();
+            }
+        });
+
+        $('chatList').addEventListener('submit', async (event) => {
+            const form = event.target.closest('.convo-reply');
+            if (!form) return;
+            event.preventDefault();
+            const box = form.querySelector('textarea');
+            const text = box.value.trim();
+            if (!text) return;
+            const button = form.querySelector('button');
+            button.disabled = true;
+            const { error } = await sb.from('chat_messages').insert({ user_id: form.dataset.user, sender: 'admin', body: text });
+            button.disabled = false;
+            if (error) { say('Réponse non envoyée.', true); return; }
+            drafts.delete(form.dataset.user);
+            say('Réponse envoyée.');
+            openChats.add(form.dataset.user);
+            loadChats();
+        });
+
         async function loadAll() {
             say('');
-            await Promise.all([loadOrders(), loadReservations(), loadMessages()]);
+            await Promise.all([loadOrders(), loadReservations(), loadChats(), loadMessages()]);
             $('adminUpdated').textContent = `Mis à jour à ${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
         }
 
@@ -203,8 +298,14 @@
         guard().then((allowed) => {
             if (!allowed) return;
             loadAll();
-            // actualisation automatique toutes les 45 s, sauf si une liste déroulante est en cours d'utilisation
-            setInterval(() => { if (!document.activeElement?.matches('select')) loadAll(); }, 45000);
+            // actualisation automatique toutes les 45 s, sauf pendant l'utilisation d'une liste ou d'une réponse
+            setInterval(() => { if (!document.activeElement?.matches('select, textarea')) loadAll(); }, 45000);
+            // nouveaux messages de clients : affichage immédiat
+            sb.channel('admin-chat')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, () => {
+                    if (!document.activeElement?.matches('textarea')) loadChats();
+                })
+                .subscribe();
         });
     </script>
 </body>

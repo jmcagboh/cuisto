@@ -22,11 +22,15 @@ const sb = (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY)
   : null;
 
 /* ---------- compte client (facultatif) : bouton du menu + préremplissage ---------- */
+// Client connecté : ses demandes sont enregistrées dans son compte, sans passer par WhatsApp.
+let currentUser = null;
+
 async function applyAccount() {
   if (!sb) return;
   try {
     const { data: { session } } = await sb.auth.getSession();
     if (!session) return;
+    currentUser = session.user;
     const meta = session.user.user_metadata || {};
     const first = (meta.full_name || '').split(' ')[0];
     const nav = document.getElementById('navAccount');
@@ -39,6 +43,10 @@ async function applyAccount() {
     fill('orderPhone', meta.phone);
     fill('reservationName', meta.full_name);
     fill('reservationPhone', meta.phone);
+    fill('nameInput', meta.full_name);
+    fill('emailInput', session.user.email);
+    document.querySelectorAll('#orderForm [type="submit"]').forEach((b) => { b.textContent = 'Passer la commande'; });
+    document.querySelectorAll('#reservationForm [type="submit"]').forEach((b) => { b.textContent = 'Réserver'; });
   } catch (error) { console.error(error); }
 }
 applyAccount();
@@ -57,6 +65,15 @@ function reserveWhatsAppTab() {
     if (tab) tab.opener = null;
     return tab;
   } catch { return null; }
+}
+
+// Client connecté : tout est enregistré dans son compte, WhatsApp n'est pas nécessaire.
+function finishInAccount(statusEl, text) {
+  setStatus(statusEl, text);
+  const link = document.createElement('a');
+  link.href = 'compte.html';
+  link.textContent = ' Voir dans Mon compte';
+  statusEl.append(link);
 }
 
 function finishWithWhatsApp(tab, lines, statusEl, text, isError = false) {
@@ -98,7 +115,8 @@ reservationForm?.addEventListener('submit', async (event) => {
   const guests = Number(document.getElementById('reservationGuests').value) || 1;
   const note = document.getElementById('reservationNote').value.trim();
 
-  const tab = reserveWhatsAppTab();
+  const useAccount = Boolean(currentUser);
+  const tab = useAccount ? null : reserveWhatsAppTab();
   submit.disabled = true;
   setStatus(reservationMessage, 'Envoi en cours...');
 
@@ -106,6 +124,13 @@ reservationForm?.addEventListener('submit', async (event) => {
     name, phone, reservation_date: date, reservation_time: time, guests, note: note || null
   }));
   submit.disabled = false;
+
+  if (saved && useAccount) {
+    finishInAccount(reservationMessage, 'Réservation enregistrée ✓ Nous la confirmons rapidement.');
+    reservationForm.reset();
+    applyAccount();
+    return;
+  }
 
   finishWithWhatsApp(tab, [
     'Bonjour Cuisto, je souhaite réserver une table.',
@@ -210,7 +235,8 @@ orderForm?.addEventListener('submit', async (event) => {
   }
 
   const submit = orderForm.querySelector('[type="submit"]');
-  const tab = reserveWhatsAppTab();
+  const useAccount = Boolean(currentUser);
+  const tab = useAccount ? null : reserveWhatsAppTab();
   submit.disabled = true;
   setStatus(orderMessage, 'Envoi en cours...');
 
@@ -227,6 +253,18 @@ orderForm?.addEventListener('submit', async (event) => {
     p_note: note || null
   }));
   submit.disabled = false;
+
+  if (saved && useAccount) {
+    finishInAccount(orderMessage, 'Commande enregistrée ✓ Suivez son avancement dans votre compte.');
+    orderForm.reset();
+    orderAddress.disabled = true;
+    orderAddress.required = false;
+    locationButton.disabled = true;
+    locationMessage.textContent = '';
+    updateOrderTotal();
+    applyAccount();
+    return;
+  }
 
   finishWithWhatsApp(tab, [
     'Bonjour Cuisto, je souhaite passer une commande :',

@@ -39,7 +39,13 @@ function authError(error) {
   if (/not confirmed/i.test(text)) return 'Confirmez d’abord votre adresse e-mail (lien reçu par e-mail).';
   if (/password/i.test(text) && /(short|least|weak)/i.test(text)) return 'Mot de passe trop court ou trop simple (8 caractères minimum).';
   if (/invalid login/i.test(text)) return 'E-mail ou mot de passe incorrect.';
-  return 'Une erreur est survenue. Réessayez.';
+  if (/signups? (is |are )?(not allowed|disabled)|signup.*disabled/i.test(text)) return 'Les inscriptions sont désactivées dans Supabase (Authentication > Sign In / Providers > « Allow new users to sign up »).';
+  if (/error sending .*email|sending confirmation|smtp/i.test(text)) return 'Le compte n’a pas pu être créé car Supabase n’arrive pas à envoyer l’e-mail de confirmation. Désactivez « Confirm email » (Authentication > Sign In / Providers > Email) ou réessayez plus tard.';
+  if (/failed to fetch|network|load failed/i.test(text)) return 'Connexion au serveur impossible. Vérifiez votre connexion Internet.';
+  if (/invalid api key|apikey|jwt/i.test(text)) return 'Clé Supabase invalide : vérifiez config.js.';
+  if (/database error/i.test(text)) return 'Erreur de base de données : relancez schema.sql dans Supabase.';
+  // cause réelle affichée pour faciliter le diagnostic
+  return `Une erreur est survenue${text ? ` (${text})` : ''}. Réessayez.`;
 }
 
 /* ---------- vue client connecté ---------- */
@@ -113,7 +119,7 @@ $('loginForm').addEventListener('submit', async (event) => {
   const { data, error } = await sb.auth.signInWithPassword({
     email: $('loginEmail').value.trim().toLowerCase(),
     password: $('loginPassword').value
-  });
+  }).catch((e) => ({ data: null, error: e }));
   button.disabled = false;
   if (error) { say(authError(error), true); return; }
   $('loginForm').reset();
@@ -129,7 +135,7 @@ $('signupForm').addEventListener('submit', async (event) => {
     email: $('signupEmail').value.trim().toLowerCase(),
     password: $('signupPassword').value,
     options: { data: { full_name: $('signupName').value.trim(), phone: $('signupPhone').value.trim() } }
-  });
+  }).catch((e) => ({ data: null, error: e }));
   button.disabled = false;
   if (error) { say(authError(error), true); return; }
   event.target.reset();
