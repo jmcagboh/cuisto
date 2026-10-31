@@ -24,6 +24,21 @@ const sb = (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY)
 /* ---------- compte client (facultatif) : bouton du menu + préremplissage ---------- */
 // Client connecté : ses demandes sont enregistrées dans son compte, sans passer par WhatsApp.
 let currentUser = null;
+let accountMeta = {};
+
+// Enregistre automatiquement nom, téléphone et adresse dans le compte (seulement si quelque chose a changé)
+async function rememberDetails(details) {
+  if (!sb || !currentUser) return;
+  const changed = {};
+  for (const [key, value] of Object.entries(details)) {
+    if (value && value !== accountMeta[key]) changed[key] = value;
+  }
+  if (!Object.keys(changed).length) return;
+  try {
+    const { data, error } = await sb.auth.updateUser({ data: changed });
+    if (!error && data?.user) { currentUser = data.user; accountMeta = data.user.user_metadata || {}; }
+  } catch (error) { console.error(error); }
+}
 
 async function applyAccount() {
   if (!sb) return;
@@ -32,6 +47,7 @@ async function applyAccount() {
     if (!session) return;
     currentUser = session.user;
     const meta = session.user.user_metadata || {};
+    accountMeta = meta;
     const first = (meta.full_name || '').split(' ')[0];
     const nav = document.getElementById('navAccount');
     if (nav) nav.textContent = first ? `Bonjour ${first}` : 'Mon compte';
@@ -43,6 +59,7 @@ async function applyAccount() {
     fill('orderPhone', meta.phone);
     fill('reservationName', meta.full_name);
     fill('reservationPhone', meta.phone);
+    fill('orderAddress', meta.address);
     fill('nameInput', meta.full_name);
     fill('emailInput', session.user.email);
     document.querySelectorAll('#orderForm [type="submit"]').forEach((b) => { b.textContent = 'Passer la commande'; });
@@ -127,11 +144,14 @@ reservationForm?.addEventListener('submit', async (event) => {
 
   if (saved && useAccount) {
     finishInAccount(reservationMessage, 'Réservation enregistrée ✓ Nous la confirmons rapidement.');
+    showToast('✓ Réservation enregistrée', { href: 'compte.html', label: 'Voir mon compte' });
+    await rememberDetails({ full_name: name, phone });
     reservationForm.reset();
     applyAccount();
     return;
   }
 
+  if (!saved) showToast('Enregistrement impossible : utilisez WhatsApp pour envoyer la réservation.', null, 'error');
   finishWithWhatsApp(tab, [
     'Bonjour Cuisto, je souhaite réserver une table.',
     `Nom : ${name}`,
@@ -179,6 +199,7 @@ document.querySelectorAll('input[name="fulfillment"]').forEach((input) => {
     orderAddress.required = isDelivery;
     orderAddress.disabled = !isDelivery;
     locationButton.disabled = !isDelivery;
+    if (isDelivery && !orderAddress.value && accountMeta.address) orderAddress.value = accountMeta.address;
     if (!isDelivery) {
       orderAddress.value = '';
       orderLatitude.value = '';
@@ -256,6 +277,8 @@ orderForm?.addEventListener('submit', async (event) => {
 
   if (saved && useAccount) {
     finishInAccount(orderMessage, 'Commande enregistrée ✓ Suivez son avancement dans votre compte.');
+    showToast('✓ Commande enregistrée', { href: 'compte.html', label: 'Suivre ma commande' });
+    await rememberDetails({ full_name: name, phone, address: isDelivery ? address : '' });
     orderForm.reset();
     orderAddress.disabled = true;
     orderAddress.required = false;
@@ -266,6 +289,7 @@ orderForm?.addEventListener('submit', async (event) => {
     return;
   }
 
+  if (!saved) showToast('Enregistrement impossible : utilisez WhatsApp pour envoyer la commande.', null, 'error');
   finishWithWhatsApp(tab, [
     'Bonjour Cuisto, je souhaite passer une commande :',
     ...items.map((item) => `- ${item.quantity} x ${item.name} (${formatPrice(item.price * item.quantity)})`),
@@ -299,14 +323,20 @@ let toastTimer = null;
 const plain = (text) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 const sameDish = (a, b) => plain(a) === plain(b);
 
-function showToast(text) {
-  const link = document.createElement('a');
-  link.href = '#commande';
-  link.textContent = 'Voir la commande';
-  toast.replaceChildren(document.createTextNode(text), link);
+function showToast(text, link = { href: '#commande', label: 'Voir la commande' }, type = 'success') {
+  toast.className = `toast ${type}`;
+  const nodes = [document.createTextNode(text)];
+  if (link) {
+    const a = document.createElement('a');
+    a.href = link.href;
+    a.textContent = link.label;
+    nodes.push(a);
+  }
+  toast.replaceChildren(...nodes);
+  void toast.offsetWidth;
   toast.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toast.classList.remove('show'), 4000);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 5000);
 }
 
 {
@@ -360,6 +390,7 @@ contactForm?.addEventListener('submit', async (event) => {
   submit.disabled = false;
 
   if (saved) {
+    showToast('✓ Message envoyé', null);
     setStatus(status, 'Message envoyé ✓ Nous vous répondons rapidement.');
     contactForm.reset();
     return;
@@ -564,3 +595,12 @@ function initAnimations() {
 }
 
 initAnimations();
+
+/* ---------- accueil d'un nouveau client (après création du compte) ---------- */
+try {
+  const welcome = sessionStorage.getItem('cuistoWelcome');
+  if (welcome) {
+    sessionStorage.removeItem('cuistoWelcome');
+    setTimeout(() => showToast(`Bienvenue ${welcome} ! Votre compte est créé ✓`, { href: '#menu', label: 'Voir le menu' }), 600);
+  }
+} catch { /* ignoré */ }

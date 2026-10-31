@@ -15,10 +15,27 @@ const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => (
 ));
 const dateTime = (iso) => new Date(iso).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
 
+/* ---------- notifications visibles (toast) ---------- */
+const toast = document.createElement('div');
+toast.className = 'toast';
+toast.setAttribute('role', 'status');
+document.body.append(toast);
+let toastTimer = null;
+
+function notify(text, type = 'success', ms = 4200) {
+  toast.className = `toast ${type}`;
+  toast.textContent = text;
+  void toast.offsetWidth;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), ms);
+}
+
 function say(text, isError = false) {
   const node = $('accountMessage');
   node.textContent = text;
   node.classList.toggle('error', isError);
+  if (isError && text) notify(text, 'error', 6000);
 }
 
 function showTab(which) {
@@ -95,6 +112,7 @@ async function showUser(user) {
   $('userEmail').textContent = user.email || '';
   $('profileName').value = meta.full_name || '';
   $('profilePhone').value = meta.phone || '';
+  $('profileAddress').value = meta.address || '';
   say('');
   loadOrders();
   loadReservations();
@@ -123,6 +141,9 @@ $('loginForm').addEventListener('submit', async (event) => {
   button.disabled = false;
   if (error) { say(authError(error), true); return; }
   $('loginForm').reset();
+  say('');
+  const first = (data.user.user_metadata?.full_name || '').split(' ')[0];
+  notify(first ? `Connexion réussie ✓ Bonjour ${first} !` : 'Connexion réussie ✓');
   showUser(data.user);
 });
 
@@ -134,22 +155,36 @@ $('signupForm').addEventListener('submit', async (event) => {
   const { data, error } = await sb.auth.signUp({
     email: $('signupEmail').value.trim().toLowerCase(),
     password: $('signupPassword').value,
-    options: { data: { full_name: $('signupName').value.trim(), phone: $('signupPhone').value.trim() } }
+    options: {
+      data: { full_name: $('signupName').value.trim(), phone: $('signupPhone').value.trim() },
+      // lien de confirmation par e-mail : ramène directement sur le site
+      emailRedirectTo: new URL('index.html', window.location.href).href
+    }
   }).catch((e) => ({ data: null, error: e }));
   button.disabled = false;
   if (error) { say(authError(error), true); return; }
   event.target.reset();
-  if (data.session) { showUser(data.user); return; }
+  if (data.session) {
+    // compte créé et déjà connecté : on envoie le client sur le site
+    const first = (data.user.user_metadata?.full_name || '').split(' ')[0];
+    try { sessionStorage.setItem('cuistoWelcome', first || 'et bienvenue'); } catch { /* ignoré */ }
+    notify('Compte créé ✓ Redirection vers le site...', 'success', 2000);
+    setTimeout(() => window.location.assign('index.html'), 1300);
+    return;
+  }
   // confirmation par e-mail activée dans Supabase
   showTab('login');
-  say('Compte créé ✓ Confirmez votre adresse via le lien reçu par e-mail, puis connectez-vous.');
+  say('');
+  notify('Compte créé ✓ Un e-mail de confirmation vient de vous être envoyé : cliquez sur le lien pour accéder au site.', 'info', 9000);
+  $('accountMessage').textContent = 'Compte créé ✓ Confirmez votre adresse via le lien reçu par e-mail : il vous ramène sur le site.';
 });
 
 $('forgotPassword').addEventListener('click', async () => {
   const email = $('loginEmail').value.trim().toLowerCase();
   if (!email) { say('Saisissez d’abord votre adresse e-mail ci-dessus.', true); return; }
   const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.href.split('#')[0] });
-  say(error ? authError(error) : 'Si un compte existe, un e-mail de réinitialisation vient d’être envoyé.', !!error);
+  if (error) say(authError(error), true);
+  else notify('Si un compte existe, un e-mail de réinitialisation vient d’être envoyé.', 'info', 7000);
 });
 
 $('profileForm').addEventListener('submit', async (event) => {
@@ -157,18 +192,20 @@ $('profileForm').addEventListener('submit', async (event) => {
   const button = event.target.querySelector('[type="submit"]');
   button.disabled = true;
   const { data, error } = await sb.auth.updateUser({
-    data: { full_name: $('profileName').value.trim(), phone: $('profilePhone').value.trim() }
+    data: { full_name: $('profileName').value.trim(), phone: $('profilePhone').value.trim(), address: $('profileAddress').value.trim() }
   });
   button.disabled = false;
   if (error) { say('Mise à jour impossible.', true); return; }
   $('welcome').textContent = `Bonjour ${data.user.user_metadata.full_name}`;
-  say('Informations enregistrées ✓');
+  say('');
+  notify('Informations enregistrées ✓');
 });
 
 $('logoutButton').addEventListener('click', async () => {
   await sb.auth.signOut();
   showGuest();
   showTab('login');
+  notify('Vous êtes déconnecté.', 'info');
 });
 
 /* ---------- démarrage ---------- */
@@ -182,6 +219,6 @@ $('logoutButton').addEventListener('click', async () => {
     const password = window.prompt('Choisissez un nouveau mot de passe (8 caractères minimum) :');
     if (!password || password.length < 8) { say('Mot de passe non modifié.', true); return; }
     const { error } = await sb.auth.updateUser({ password });
-    say(error ? authError(error) : 'Mot de passe modifié ✓', !!error);
+    if (error) say(authError(error), true); else notify('Mot de passe modifié ✓');
   });
 })();

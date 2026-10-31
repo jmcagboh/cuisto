@@ -4,11 +4,11 @@
     margin: 0px;
     padding: 0px;
     box-sizing: border-box;
-    font-family: calc();
     scroll-behavior: smooth;
  }
  
  body {
+    font-family: 'Poppins', sans-serif;
     background: #fff;
     min-height: 100vh;
     margin: 0;
@@ -873,7 +873,6 @@ section{
     box-shadow: 5px 15px 50px rgba(0,0,0, 0.8);
     width: 100%;
     background-position: unset;
-    background-image: url(./image/d1.jpg);
     padding-bottom: 80px;
 }
 
@@ -1472,6 +1471,9 @@ header.sticky .menuToggle{
 /* ============================================================
    Retouches : photos, titres, boutons, contact, pied de page
    ============================================================ */
+
+/* Les champs de formulaire et boutons reprennent la police du site */
+button, input, textarea, select { font-family: inherit; }
 
 /* ---- Photos : coins arrondis partout ---- */
 img { border-radius: 18px; }
@@ -2187,3 +2189,30 @@ header.sticky .menuToggle.active { background-color: rgba(0, 106, 78, 0.22); }
     .convo-head { grid-template-columns: 1fr; gap: 4px; }
     .convo-reply { flex-direction: column; align-items: stretch; }
 }
+
+/* Notifications (toast) : variantes */
+.toast.success { background: #0f2b23; border-left: 5px solid #2ce0bd; }
+.toast.error   { background: #5b1a14; border-left: 5px solid #ff8a7a; }
+.toast.info    { background: #1d3b52; border-left: 5px solid #7bdff2; }
+
+/* Pastille « messages non lus » sur le bouton de messagerie */
+.chat-fab { overflow: visible; }
+.chat-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    display: grid;
+    place-items: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border: 2px solid #fff;
+    border-radius: 999px;
+    background: #d92d20;
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1;
+    animation: pop 0.4s ease;
+}
+.chat-badge[hidden] { display: none; }

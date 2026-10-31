@@ -15,6 +15,7 @@
             <div class="admin-tools">
                 <span id="adminUser" class="admin-user"></span>
                 <span id="adminUpdated" class="admin-updated"></span>
+                <button id="adminAlerts" class="admin-button secondary" type="button" aria-pressed="false">🔔 Activer les alertes</button>
                 <button id="adminRefresh" class="admin-button secondary" type="button">Actualiser</button>
                 <button id="adminLogout" class="admin-button" type="button">Se déconnecter</button>
             </div>
@@ -270,6 +271,105 @@
             loadChats();
         });
 
+
+        /* ---------- alertes : nouvelle commande, réservation ou message ---------- */
+        const baseTitle = document.title;
+        let unseen = 0;
+        let audioCtx = null;
+        let alertsOn = false;
+        try { alertsOn = localStorage.getItem('cuistoAlerts') === '1'; } catch { /* ignoré */ }
+
+        const toastBox = document.createElement('div');
+        toastBox.className = 'toast';
+        toastBox.setAttribute('role', 'status');
+        document.body.append(toastBox);
+        let toastTimer = null;
+
+        function showToast(text) {
+            toastBox.className = 'toast success';
+            toastBox.textContent = text;
+            void toastBox.offsetWidth;
+            toastBox.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toastBox.classList.remove('show'), 7000);
+        }
+
+        function beep() {
+            try {
+                audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+                [880, 1175].forEach((freq, i) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.frequency.value = freq;
+                    osc.connect(gain); gain.connect(audioCtx.destination);
+                    const t = audioCtx.currentTime + i * 0.18;
+                    gain.gain.setValueAtTime(0.0001, t);
+                    gain.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+                    osc.start(t); osc.stop(t + 0.17);
+                });
+            } catch { /* le son est un plus : on ignore l'erreur */ }
+        }
+
+        function refreshAlertButton() {
+            const button = $('adminAlerts');
+            button.textContent = alertsOn ? '🔔 Alertes activées' : '🔔 Activer les alertes';
+            button.setAttribute('aria-pressed', String(alertsOn));
+        }
+
+        function alertNew(text) {
+            showToast(text);
+            if (!alertsOn) return;
+            beep();
+            unseen += 1;
+            document.title = `(${unseen}) ${baseTitle}`;
+            if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
+                try { new Notification('Cuisto', { body: text }); } catch { /* ignoré */ }
+            }
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) { unseen = 0; document.title = baseTitle; }
+        });
+
+        $('adminAlerts').addEventListener('click', async () => {
+            alertsOn = !alertsOn;
+            try { localStorage.setItem('cuistoAlerts', alertsOn ? '1' : '0'); } catch { /* ignoré */ }
+            if (alertsOn) {
+                beep(); // le clic autorise le son
+                if ('Notification' in window && Notification.permission === 'default') {
+                    try { await Notification.requestPermission(); } catch { /* ignoré */ }
+                }
+                showToast('Alertes activées : vous serez prévenu à chaque nouvelle demande.');
+            } else {
+                showToast('Alertes désactivées.');
+            }
+            refreshAlertButton();
+        });
+        refreshAlertButton();
+
+        function subscribeToAlerts() {
+            const idle = () => !document.activeElement?.matches('select, textarea');
+            sb.channel('admin-alerts')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
+                    alertNew(`Nouvelle commande de ${payload.new.customer_name || 'un client'} : ${Number(payload.new.total || 0).toLocaleString('fr-FR')} FCFA`);
+                    if (idle()) loadOrders();
+                })
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'reservations' }, (payload) => {
+                    alertNew(`Nouvelle réservation de ${payload.new.name || 'un client'}`);
+                    if (idle()) loadReservations();
+                })
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'contact_messages' }, (payload) => {
+                    alertNew(`Nouveau message de ${payload.new.name || 'un visiteur'}`);
+                    if (idle()) loadMessages();
+                })
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, (payload) => {
+                    if (payload.new.sender === 'client') alertNew(`Nouveau message de ${payload.new.user_name || 'un client'} dans la messagerie`);
+                    if (idle()) loadChats();
+                })
+                .subscribe();
+        }
+
         async function loadAll() {
             say('');
             await Promise.all([loadOrders(), loadReservations(), loadChats(), loadMessages()]);
@@ -300,12 +400,8 @@
             loadAll();
             // actualisation automatique toutes les 45 s, sauf pendant l'utilisation d'une liste ou d'une réponse
             setInterval(() => { if (!document.activeElement?.matches('select, textarea')) loadAll(); }, 45000);
-            // nouveaux messages de clients : affichage immédiat
-            sb.channel('admin-chat')
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, () => {
-                    if (!document.activeElement?.matches('textarea')) loadChats();
-                })
-                .subscribe();
+            // nouvelles demandes : affichage et alerte immédiats
+            subscribeToAlerts();
         });
     </script>
 </body>

@@ -108,6 +108,12 @@ function addRemoteMessage(row) {
   scrollToEnd();
 }
 
+// Marque la conversation comme lue (efface la pastille « non lus » sur le site)
+async function markRead() {
+  if (!account || document.hidden) return;
+  try { await sb.rpc('chat_mark_read'); } catch { /* ignoré */ }
+}
+
 async function loadConversation() {
   const { data, error } = await sb.from('chat_messages')
     .select('id, created_at, sender, body')
@@ -121,6 +127,7 @@ async function loadConversation() {
     messages = [{ id: 0, from: 'cuisto', text: `Bonjour ${account.name || ''} ! Une commande, une réservation ou une question ? Écrivez-nous ici, nous vous répondons directement.`.replace('  ', ' '), time: Date.now() }];
   }
   render();
+  markRead();
 }
 
 function subscribeToReplies() {
@@ -130,8 +137,11 @@ function subscribeToReplies() {
       (payload) => {
         if (messages.length === 1 && messages[0].id === 0) { messages = []; chatLog.replaceChildren(); }
         addRemoteMessage(payload.new);
+        if (payload.new.sender === 'admin') markRead();
       })
     .subscribe();
+
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) markRead(); });
 
   setInterval(async () => {
     if (document.hidden) return;
@@ -140,6 +150,7 @@ function subscribeToReplies() {
       .select('id, created_at, sender, body').gt('id', last).order('id', { ascending: true });
     if (data?.length && messages.length === 1 && messages[0].id === 0) { messages = []; chatLog.replaceChildren(); }
     data?.forEach(addRemoteMessage);
+    if (data?.some((row) => row.sender === 'admin')) markRead();
   }, 20000);
 }
 
