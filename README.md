@@ -2,6 +2,8 @@
 
 Site web d'un restaurant de **cuisine africaine à Lomé (Togo)** : menu, commande (à emporter ou en livraison), réservation de table, contact, messagerie, comptes clients et tableau de bord administrateur.
 
+> **Projet de démonstration** : réalisé à des fins d'apprentissage à partir d'un tutoriel YouTube, puis enrichi (comptes clients, messagerie en direct, base Supabase sécurisée par RLS, tableau de bord administrateur, alertes, notifications). Le restaurant, les plats, les prix, les horaires et les avis sont fictifs ; le projet n'est pas commercialisé.
+
 Site en ligne : https://jmcagboh.github.io/cuisto/
 
 ---
@@ -14,7 +16,7 @@ Site en ligne : https://jmcagboh.github.io/cuisto/
 - Réservation de table (date, heure, nombre de personnes).
 - Formulaire de contact, horaires, coordonnées, carte (qui ne zoome pas sans clic).
 - Page « Autres plats » (`plats.html`).
-- Mini-jeu des plats.
+- **Jeu « Le bon plat »** : reconnaître les plats du menu (photo → nom, ou description → photo) en 30 secondes, avec séries de bonnes réponses. **Récompense** pour les clients connectés : 100 points = −5 %, 200 points = −10 % sur une commande (une récompense par jour et par compte, valable 24 h, utilisable une seule fois). Le visiteur sans compte est invité à se connecter pour la débloquer.
 - **Compte client facultatif** (`compte.html`) : inscription / connexion, historique des commandes et réservations, modification du nom, du téléphone et de l'adresse de livraison habituelle. Après l'inscription, le client est envoyé directement sur le site (le lien de confirmation par e-mail le ramène aussi sur le site).
 - **Enregistrement automatique** des informations du client connecté : nom, téléphone et adresse sont mémorisés à chaque commande ou réservation et préremplis ensuite.
 - **Notifications** (bulles en bas de l'écran) pour la connexion, l'inscription, la déconnexion, l'enregistrement du profil, les commandes, réservations et messages.
@@ -109,6 +111,7 @@ Pousser le dossier sur GitHub, puis activer **GitHub Pages** sur la branche prin
 - Un client connecté ne lit que **ses** commandes, réservations et messages, et ne peut pas écrire au nom d'un autre.
 - Seuls les comptes listés dans la table `admins` voient et gèrent tout.
 - Messagerie : limite de 20 messages par minute et par client.
+- Récompenses du jeu : créées uniquement par la fonction `claim_game_reward` (client connecté, une par jour), contrôlées et appliquées par `create_order` côté base (propriétaire, non utilisée, non expirée). Le score étant calculé dans le navigateur, la remise reste volontairement petite et limitée.
 - `is_admin()` n'est plus appelable par les visiteurs non connectés.
 - Tout texte venant de la base est échappé avant affichage (protection contre l'injection de HTML).
 
@@ -123,6 +126,7 @@ Pousser le dossier sur GitHub, puis activer **GitHub Pages** sur la branche prin
 | `reservations` | Réservations de table |
 | `contact_messages` | Messages du formulaire de contact |
 | `chat_messages` | Messagerie client ↔ restaurant |
+| `game_rewards` | Récompenses du jeu (pourcentage, expiration, utilisée ou non) |
 | `chat_reads` | Date du dernier message lu par chaque client (messages non lus) |
 | `admins` | Comptes administrateurs |
 
@@ -130,6 +134,8 @@ Pousser le dossier sur GitHub, puis activer **GitHub Pages** sur la branche prin
 
 ## Journal des évolutions
 
+- **2026-11-07 (nuit)** : jeu refait avec les vraies photos du menu (plus aucun emoji), devinettes, séries, barre de progression vers la récompense, fin de partie qui propose de commander les plats ratés ; récompense −5 % / −10 % gérée par Supabase (`game_rewards`, `claim_game_reward`, `create_order` avec paramètre `p_reward`) ; la remise apparaît dans l'administration. **Correctif** : le déclencheur d'alertes e-mail faisait échouer les nouvelles commandes depuis le 2026-10-31 (corrigé).
+- **2026-11-07 (soir)** : mention « Projet de démonstration » dans le pied de page et le README. Bouton « Appeler » affiché uniquement sur mobile (écran ≤ 768 px).
 - **2026-11-07 (suite)** : bouton « Appeler » sur mobile, badge Ouvert/Fermé calculé d'après les horaires, étiquettes sur le menu. Les horaires sont écrits dans `script.js` (constante `HOURS`) : à modifier en même temps que la section Contact.
 - **2026-11-07** : section « Que disent nos clients » refaite (le texte des avis était blanc sur fond blanc, donc illisible) : fond vert sombre, cartes à bandeau de couleur, guillemets, étoiles qui s'allument, étiquette par client, cartes de même hauteur.
 - **2026-10-31** : alertes par e-mail quand la page d'administration est fermée (extension `pg_net`, déclencheurs sur les 4 tables, fonction Edge `notify-admin`, secret partagé stocké dans le schéma privé `private`).

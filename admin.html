@@ -106,7 +106,7 @@
         /* ---------- chargement ---------- */
         async function loadOrders() {
             const { data, error } = await sb.from('orders')
-                .select('id, created_at, customer_name, customer_phone, fulfillment, payment_method, address, latitude, longitude, note, total, status, order_items(name, quantity)')
+                .select('id, created_at, customer_name, customer_phone, fulfillment, payment_method, address, latitude, longitude, note, total, reward_percent, status, order_items(name, quantity)')
                 .order('created_at', { ascending: false }).limit(200);
             if (error) { say('Impossible de charger les commandes.', true); return; }
             const fresh = data.filter((o) => o.status === 'Nouvelle').length;
@@ -126,7 +126,7 @@
                     </div>
                     <div>
                         <strong>${items || '—'}</strong>
-                        <p class="total">Total : ${Number(o.total || 0).toLocaleString('fr-FR')} FCFA</p>
+                        <p class="total">Total : ${Number(o.total || 0).toLocaleString('fr-FR')} FCFA${o.reward_percent ? ` (remise jeu −${Number(o.reward_percent)} %)` : ''}</p>
                         <p>${esc(o.note || 'Sans remarque')}</p>
                         <p>${esc(dateTime(o.created_at))}</p>
                     </div>

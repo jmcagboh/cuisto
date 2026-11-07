@@ -25,6 +25,7 @@ const sb = (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY)
 // Client connecté : ses demandes sont enregistrées dans son compte, sans passer par WhatsApp.
 let currentUser = null;
 let accountMeta = {};
+let activeReward = null; // récompense du jeu disponible pour ce client
 
 // Enregistre automatiquement nom, téléphone et adresse dans le compte (seulement si quelque chose a changé)
 async function rememberDetails(details) {
@@ -64,6 +65,8 @@ async function applyAccount() {
     fill('emailInput', session.user.email);
     document.querySelectorAll('#orderForm [type="submit"]').forEach((b) => { b.textContent = 'Passer la commande'; });
     document.querySelectorAll('#reservationForm [type="submit"]').forEach((b) => { b.textContent = 'Réserver'; });
+    await loadReward();
+    claimPending();
   } catch (error) { console.error(error); }
 }
 applyAccount();
@@ -178,9 +181,12 @@ const orderTotal = document.getElementById('orderTotal');
 
 function updateOrderTotal() {
   if (!orderForm || !orderTotal) return;
-  const total = [...orderForm.querySelectorAll('[data-price]')]
+  const subtotal = [...orderForm.querySelectorAll('[data-price]')]
     .reduce((sum, input) => sum + (Number(input.value) || 0) * Number(input.dataset.price), 0);
-  const label = formatPrice(total);
+  const useReward = activeReward && subtotal > 0 && document.getElementById('useReward')?.checked;
+  const label = useReward
+    ? `${formatPrice(Math.round(subtotal * (100 - activeReward.percent) / 100))} (−${activeReward.percent} %)`
+    : formatPrice(subtotal);
   if (orderTotal.textContent === label) return;
   orderTotal.textContent = label;
   // petit effet « pop » à chaque changement du total
@@ -271,7 +277,8 @@ orderForm?.addEventListener('submit', async (event) => {
     p_address: address || null,
     p_lat: hasPosition ? Number(orderLatitude.value) : null,
     p_lng: hasPosition ? Number(orderLongitude.value) : null,
-    p_note: note || null
+    p_note: note || null,
+    p_reward: (activeReward && document.getElementById('useReward')?.checked) ? activeReward.id : null
   }));
   submit.disabled = false;
 
@@ -286,6 +293,7 @@ orderForm?.addEventListener('submit', async (event) => {
     locationMessage.textContent = '';
     updateOrderTotal();
     applyAccount();
+    loadReward();
     return;
   }
 
@@ -426,30 +434,59 @@ appStartBtn?.addEventListener('click', () => {
   appLaunch.classList.add('hidden');
 });
 
-/* ---------- jeu ---------- */
-const dishes = [
-  { name: 'Riz au gras', emoji: '🍚', color: '#f4b942' },
-  { name: 'Akoume', emoji: '🍛', color: '#c77dff' },
-  { name: 'Poisson braisé', emoji: '🐟', color: '#4ecdc4' },
-  { name: 'Attiéké', emoji: '🥭', color: '#ff9f1c' },
-  { name: 'Spaghetti', emoji: '🍝', color: '#ff6b6b' },
-  { name: 'Friture', emoji: '🍤', color: '#7bdff2' }
-];
+/* ---------- Jeu « Le bon plat » ----------
+   Les plats et les photos viennent du menu de la page (aucun emoji).
+   Récompense : 100 pts = -5 %, 200 pts = -10 % (client connecté). Elle est créée et contrôlée
+   par Supabase (claim_game_reward / create_order) : le navigateur ne fixe jamais le prix. */
+const GAME_SECONDS = 30;
+const MAX_SCORE = 500;
+const TIERS = [{ points: 100, percent: 5 }, { points: 200, percent: 10 }];
+const DISPLAY_NAMES = { Attieke: 'Attiéké', Akoume: 'Akoumè', Pokoume: 'Pokoumè' };
+const CLUES = {
+  'Riz blanc': 'Riz blanc bien parfumé, servi avec sa sauce tomate relevée',
+  Koliko: 'Frites d’igname dorées et croustillantes, avec du piment frais',
+  Brochette: 'Viande marinée et grillée, avec une sauce pimentée à part',
+  Spaghetti: 'Pâtes sautées aux légumes croquants et morceaux de viande',
+  Botocoin: 'Beignets dorés, croustillants dehors et moelleux dedans',
+  Attieke: 'Semoule de manioc fine et légère, avec poisson braisé et oignons',
+  Akoume: 'Pâte de maïs servie avec la sauce adémè bien onctueuse',
+  Pokoume: 'Pâte moelleuse servie avec sa sauce et sa viande, façon togolaise'
+};
+// ces deux plats se ressemblent : on ne les propose jamais ensemble dans une devinette
+const LOOKALIKES = [['Akoume', 'Pokoume']];
 
 const scoreEl = document.getElementById('score');
 const timerEl = document.getElementById('timer');
+const streakEl = document.getElementById('streak');
 const bestScoreEl = document.getElementById('bestScore');
-const targetDishEl = document.getElementById('targetDish');
 const gameBoard = document.getElementById('gameBoard');
+const questionLabel = document.getElementById('questionLabel');
+const questionBody = document.getElementById('questionBody');
 const startGameBtn = document.getElementById('startGameBtn');
 const gameMessage = document.getElementById('gameMessage');
+const rewardFill = document.getElementById('rewardFill');
+const rewardBar = document.getElementById('rewardBar');
+const rewardHint = document.getElementById('rewardHint');
+
+const gameDishes = [...document.querySelectorAll('#menu .box[data-dish]')].map((box) => ({
+  key: box.dataset.dish,
+  name: DISPLAY_NAMES[box.dataset.dish] || box.dataset.dish,
+  img: box.querySelector('img')?.getAttribute('src') || ''
+}));
 
 let score = 0;
-let timeLeft = 30;
-let currentTarget = null;
+let timeLeft = GAME_SECONDS;
+let streak = 0;
+let current = null;
+let previousKey = null;
 let timerId = null;
 let isPlaying = false;
+let locked = false;
+const missed = new Set();
 let bestScore = Number(localStorage.getItem('cuistoBestScore')) || 0;
+
+const pick = (list) => list[Math.floor(Math.random() * list.length)];
+const isLookalike = (a, b) => LOOKALIKES.some(([x, y]) => (a === x && b === y) || (a === y && b === x));
 
 function shuffle(array) {
   const copy = [...array];
@@ -463,94 +500,233 @@ function shuffle(array) {
 function updateScoreboard() {
   scoreEl.textContent = score;
   timerEl.textContent = timeLeft;
+  streakEl.textContent = streak > 1 ? `×${streak}` : streak;
   bestScoreEl.textContent = bestScore;
+  timerEl.classList.toggle('low', isPlaying && timeLeft <= 8);
+  const pct = Math.min(100, (score / TIERS[TIERS.length - 1].points) * 100);
+  rewardFill.style.width = `${pct}%`;
+  rewardBar.setAttribute('aria-valuenow', String(Math.min(score, 200)));
+  rewardBar.classList.toggle('t1-done', score >= TIERS[0].points);
+  rewardBar.classList.toggle('t2-done', score >= TIERS[1].points);
+  const next = TIERS.find((tier) => score < tier.points);
+  rewardHint.textContent = next
+    ? `Encore ${next.points - score} points pour −${next.percent} % sur votre commande.`
+    : 'Remise maximale atteinte : −10 % sur votre commande !';
 }
 
-function setMessage(text) {
-  gameMessage.textContent = text;
-}
-
-function endGame() {
-  isPlaying = false;
-  clearInterval(timerId);
-  if (score > bestScore) {
-    bestScore = score;
-    localStorage.setItem('cuistoBestScore', String(bestScore));
-  }
-  updateScoreboard();
-  setMessage(`Partie terminée ! Tu as marqué ${score} points.`);
-  targetDishEl.textContent = 'Clique sur démarrer pour rejouer';
-  gameBoard.innerHTML = '<div class="game-empty">Le chef attend votre prochaine partie.</div>';
-  startGameBtn.textContent = 'Rejouer';
-}
+function setMessage(text) { gameMessage.textContent = text; }
 
 function generateRound() {
-  if (!isPlaying) return;
+  if (!isPlaying || gameDishes.length < 4) return;
+  const useClue = Math.random() < 0.5;
+  const pool = gameDishes.filter((d) => d.key !== previousKey && (!useClue || CLUES[d.key]));
+  const target = pick(pool);
+  previousKey = target.key;
+  const others = shuffle(gameDishes.filter((d) => d.key !== target.key && !(useClue && isLookalike(target.key, d.key)))).slice(0, 3);
+  const choices = shuffle([target, ...others]);
+  current = target;
+  locked = false;
 
-  const target = dishes[Math.floor(Math.random() * dishes.length)];
-  currentTarget = target;
-  targetDishEl.textContent = target.name;
-
-  const wrongChoices = shuffle(
-    dishes.filter((dish) => dish.name !== target.name)
-  ).slice(0, 3);
-
-  const choices = shuffle([target, ...wrongChoices]);
-
-  gameBoard.innerHTML = choices
-    .map(
-      (dish) => `
-        <button class="dish-card" data-name="${dish.name}" style="--card-color: ${dish.color}">
-          <span class="dish-emoji">${dish.emoji}</span>
-          <span class="dish-label">${dish.name}</span>
-        </button>
-      `
-    )
-    .join('');
+  if (useClue) {
+    questionLabel.textContent = 'Quel plat correspond à cette description ?';
+    questionBody.innerHTML = '';
+    const clue = document.createElement('h3');
+    clue.className = 'game-clue';
+    clue.textContent = `« ${CLUES[target.key]} »`;
+    questionBody.append(clue);
+    gameBoard.className = 'game-board photos';
+    gameBoard.innerHTML = choices.map((d) => `
+      <button type="button" class="dish-card photo" data-key="${d.key}" aria-label="${d.name}">
+        <img src="${d.img}" alt="" width="220" height="140">
+      </button>`).join('');
+  } else {
+    questionLabel.textContent = 'Quel est ce plat ?';
+    questionBody.innerHTML = '';
+    const photo = document.createElement('img');
+    photo.className = 'game-photo';
+    photo.src = target.img;
+    photo.alt = 'Photo du plat à reconnaître';
+    questionBody.append(photo);
+    gameBoard.className = 'game-board names';
+    gameBoard.innerHTML = choices.map((d) => `
+      <button type="button" class="dish-card name" data-key="${d.key}">
+        <span class="dish-label">${d.name}</span>
+      </button>`).join('');
+  }
 }
 
 function startGame() {
   score = 0;
-  timeLeft = 30;
+  streak = 0;
+  timeLeft = GAME_SECONDS;
   isPlaying = true;
-  currentTarget = null;
-  setMessage('Choisissez le bon plat !');
-  updateScoreboard();
+  previousKey = null;
+  missed.clear();
+  setMessage('Cherchez vite : chaque bonne réponse donne du temps en plus !');
   startGameBtn.textContent = 'Nouvelle partie';
   clearInterval(timerId);
+  updateScoreboard();
   generateRound();
-
   timerId = setInterval(() => {
     timeLeft -= 1;
+    if (timeLeft <= 0) { timeLeft = 0; endGame(); return; }
     updateScoreboard();
-
-    if (timeLeft <= 0) {
-      endGame();
-    }
   }, 1000);
 }
 
 gameBoard?.addEventListener('click', (event) => {
   const card = event.target.closest('.dish-card');
-  if (!card || !isPlaying) return;
+  if (!card || !isPlaying || locked) return;
+  locked = true;
+  const right = card.dataset.key === current.key;
 
-  const chosenName = card.dataset.name;
-
-  if (chosenName === currentTarget.name) {
-    score += 10;
-    timeLeft = Math.min(30, timeLeft + 1);
-    setMessage('Bonne réponse ! Le client est ravi.');
+  if (right) {
+    streak += 1;
+    score = Math.min(MAX_SCORE, score + 10 + (streak >= 5 ? 10 : streak >= 3 ? 5 : 0));
+    timeLeft = Math.min(GAME_SECONDS + 15, timeLeft + (score < 60 ? 2 : score < 150 ? 1 : 0));
+    card.classList.add('right');
+    setMessage(streak >= 3 ? `Série de ${streak} ! Bonus de points.` : 'Bonne réponse !');
   } else {
+    streak = 0;
     score = Math.max(0, score - 5);
-    setMessage(`Raté ! Il fallait choisir ${currentTarget.name}.`);
+    timeLeft = Math.max(1, timeLeft - 2);
+    missed.add(current.key);
+    card.classList.add('wrong');
+    gameBoard.querySelector(`[data-key="${current.key}"]`)?.classList.add('right');
+    setMessage(`Raté : c’était ${current.name}.`);
+  }
+  updateScoreboard();
+  setTimeout(() => {
+    if (!isPlaying) return;
+    if (score >= MAX_SCORE) { endGame(); return; }
+    generateRound();
+  }, right ? 350 : 800);
+});
+
+/* ---------- fin de partie, récompense ---------- */
+function tierFor(points) {
+  return [...TIERS].reverse().find((tier) => points >= tier.points) || null;
+}
+
+async function endGame() {
+  isPlaying = false;
+  clearInterval(timerId);
+  const finalScore = score;
+  if (finalScore > bestScore) {
+    bestScore = finalScore;
+    localStorage.setItem('cuistoBestScore', String(bestScore));
+  }
+  updateScoreboard();
+  startGameBtn.textContent = 'Rejouer';
+  setMessage('');
+  questionLabel.textContent = 'Partie terminée';
+  questionBody.innerHTML = `<h3>${finalScore} points</h3>`;
+
+  const tier = tierFor(finalScore);
+  const next = TIERS.find((t) => finalScore < t.points);
+  const missedDishes = gameDishes.filter((d) => missed.has(d.key));
+  const result = document.createElement('div');
+  result.className = 'game-result';
+  gameBoard.className = 'game-board';
+  gameBoard.innerHTML = '';
+  gameBoard.append(result);
+
+  const line = (html) => { const p = document.createElement('p'); p.innerHTML = html; result.append(p); return p; };
+  const button = (label, onClick, secondary = false) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = secondary ? 'admin-button secondary' : 'btn1';
+    b.textContent = label;
+    b.addEventListener('click', onClick);
+    result.append(b);
+    return b;
+  };
+
+  if (!tier) {
+    line(`Il vous manquait <strong>${next.points - finalScore} points</strong> pour gagner −${next.percent} % sur votre commande. Retentez votre chance !`);
+  } else if (!currentUser) {
+    try { localStorage.setItem('cuistoPendingScore', JSON.stringify({ score: finalScore, at: Date.now() })); } catch { /* ignoré */ }
+    line(`Bravo ! Vous avez gagné <strong>−${tier.percent} %</strong> sur une commande.`);
+    line('Connectez-vous ou créez un compte pour débloquer cette récompense (valable 1 heure).');
+    const a = document.createElement('a');
+    a.className = 'btn1';
+    a.href = 'compte.html';
+    a.textContent = 'Me connecter';
+    result.append(a);
+  } else {
+    line('Vérification de votre récompense...');
+    const reward = await claimReward(finalScore);
+    result.firstChild.remove();
+    if (!reward) {
+      line('La récompense n’a pas pu être enregistrée pour le moment. Réessayez plus tard.');
+    } else if (reward.already && reward.used) {
+      line('Vous avez déjà utilisé votre récompense du jour. Revenez demain pour en gagner une autre !');
+    } else if (reward.already) {
+      line(`Vous avez déjà une récompense active : <strong>−${reward.percent} %</strong> sur votre prochaine commande.`);
+    } else {
+      line(`Récompense gagnée : <strong>−${reward.percent} %</strong> sur votre prochaine commande (valable 24 h).`);
+    }
+    if (reward && !(reward.already && reward.used)) {
+      button('Utiliser ma récompense', () => document.getElementById('commande')?.scrollIntoView({ behavior: 'smooth' }));
+    }
   }
 
-  updateScoreboard();
-  generateRound();
-});
+  if (missedDishes.length) {
+    line(`À retenir : <strong>${missedDishes.map((d) => d.name).join(', ')}</strong>.`);
+    const first = missedDishes[0];
+    button(`Commander : ${first.name}`, () => {
+      document.querySelector(`#menu .box[data-dish="${first.key}"]`)?.click();
+      document.getElementById('commande')?.scrollIntoView({ behavior: 'smooth' });
+    }, true);
+  } else if (finalScore > 0) {
+    line('Aucune erreur sur cette partie : vous connaissez bien notre menu !');
+  }
+}
 
 startGameBtn?.addEventListener('click', startGame);
 if (scoreEl && timerEl && bestScoreEl) updateScoreboard();
+
+/* ---------- récompense du jeu : création, lecture, utilisation à la commande ---------- */
+async function claimReward(points) {
+  if (!sb || !currentUser) return null;
+  try {
+    const { data, error } = await sb.rpc('claim_game_reward', { p_score: points });
+    if (error) throw error;
+    await loadReward();
+    return data;
+  } catch (error) { console.error(error); return null; }
+}
+
+// un score obtenu avant de se connecter est validé après la connexion (1 heure maximum)
+async function claimPending() {
+  let pending = null;
+  try { pending = JSON.parse(localStorage.getItem('cuistoPendingScore') || 'null'); } catch { /* ignoré */ }
+  if (!pending) return;
+  try { localStorage.removeItem('cuistoPendingScore'); } catch { /* ignoré */ }
+  if (Date.now() - pending.at > 3600000 || !tierFor(pending.score)) return;
+  const reward = await claimReward(pending.score);
+  if (reward && !reward.already) showToast(`Récompense du jeu débloquée : −${reward.percent} % sur votre commande`, { href: '#commande', label: 'Commander' });
+}
+
+async function loadReward() {
+  activeReward = null;
+  if (sb && currentUser) {
+    try {
+      const { data } = await sb.from('game_rewards').select('id, percent, expires_at')
+        .is('used_at', null).gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false }).limit(1);
+      if (data && data.length) activeReward = data[0];
+    } catch (error) { console.error(error); }
+  }
+  const box = document.getElementById('rewardBox');
+  if (box) {
+    box.hidden = !activeReward;
+    if (activeReward) document.getElementById('rewardText').textContent = `−${activeReward.percent} %`;
+  }
+  updateOrderTotal();
+}
+
+document.getElementById('useReward')?.addEventListener('change', updateOrderTotal);
 
 /* ---------- animations ---------- */
 // Apparition des blocs au défilement (IntersectionObserver).

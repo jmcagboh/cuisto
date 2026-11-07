@@ -166,7 +166,7 @@
         <section class="jeu" id="jeu">
         <div class="titre">
             <h2 class="titre-texte"><span>J</span>eu</h2>
-            <p>Testez votre rapidité et trouvez le bon plat avant la fin du temps.</p>
+            <p>Reconnaissez les plats de notre menu avant la fin du temps. À 100 points, gagnez <strong>−5 %</strong> sur votre commande ; à 200 points, <strong>−10 %</strong> (avec un compte client).</p>
         </div>
 
         <div class="game-panel">
@@ -180,21 +180,34 @@
                     <strong id="timer">30</strong>
                 </div>
                 <div class="game-stat">
+                    <span>Série</span>
+                    <strong id="streak">0</strong>
+                </div>
+                <div class="game-stat">
                     <span>Record</span>
                     <strong id="bestScore">0</strong>
                 </div>
             </div>
 
+            <div class="reward-track">
+                <div class="reward-bar" role="progressbar" aria-valuemin="0" aria-valuemax="200" aria-valuenow="0" id="rewardBar">
+                    <div class="reward-fill" id="rewardFill"></div>
+                    <span class="tier t1">−5 %</span>
+                    <span class="tier t2">−10 %</span>
+                </div>
+                <p id="rewardHint">Atteignez 100 points pour gagner −5 % sur votre commande.</p>
+            </div>
+
             <div class="objective">
-                <p>Récupérez :</p>
-                <h3 id="targetDish">Clique sur démarrer</h3>
+                <p id="questionLabel">Prêt à jouer ?</p>
+                <div id="questionBody"><h3 id="targetDish">Clique sur démarrer</h3></div>
             </div>
 
             <div id="gameBoard" class="game-board" aria-live="polite"></div>
 
             <div class="game-actions">
-                <button id="startGameBtn" class="btn1">Démarrer</button>
-                <p id="gameMessage">Cliquez sur “Démarrer” pour jouer.</p>
+                <button id="startGameBtn" class="btn1" type="button">Démarrer</button>
+                <p id="gameMessage">Série de 3 bonnes réponses : +5 points. Série de 5 : +10 points.</p>
             </div>
         </div>
     </section>
@@ -294,6 +307,7 @@
                     <label><span>Akoumè <strong>3 000 FCFA</strong></span><input type="number" min="0" max="20" value="0" data-price="3000" data-dish="Akoumè" data-slug="akoume" aria-label="Quantité Akoumè"></label>
                     <label><span>Pokoumè <strong>3 000 FCFA</strong></span><input type="number" min="0" max="20" value="0" data-price="3000" data-dish="Pokoumè" data-slug="pokoume" aria-label="Quantité Pokoumè"></label>
             </div>
+                <div class="reward-box" id="rewardBox" hidden><label><input type="checkbox" id="useReward" checked> Utiliser ma récompense du jeu : <strong id="rewardText"></strong></label></div>
                 <div class="order-total">Total : <strong id="orderTotal">0 FCFA</strong></div>
             <div class="order-choice">
                 <label><input type="radio" name="fulfillment" value="emporter" checked> À emporter</label>
@@ -414,6 +428,7 @@
     </footer>
 
     <div class="copyright">
+        <p class="demo-note"><strong>Projet de démonstration</strong> : site réalisé à des fins d'apprentissage, inspiré d'un tutoriel. Ce restaurant, ses plats, ses prix, ses horaires et les avis affichés sont fictifs et ne constituent pas une offre commerciale.</p>
         <p>&copy; 2026 <a href="#baniere">jmc AGBOH</a> projet Cuisto. Tous droits réservés</p>
     </div>
         </main>

@@ -2370,3 +2370,111 @@ header.sticky .menuToggle.active { background-color: rgba(0, 106, 78, 0.22); }
     .hours-title { flex-wrap: wrap; }
     .open-badge.in-card { margin: 6px 0 0; flex-basis: auto; }
 }
+
+.demo-note { max-width: 760px; margin: 0 auto 10px; font-size: 0.82rem; line-height: 1.5; opacity: 0.85; text-align: center; }
+.demo-note strong { color: #ffb85c; }
+.copyright p { color: #333; }
+.demo-note { opacity: 1; color: #555; }
+.demo-note strong { color: #b35f00; }
+
+/* ============================================================
+   Jeu « Le bon plat » : photos du menu, série, barre de récompense
+   ============================================================ */
+.jeu .titre p strong { color: #006a4e; }
+.game-header { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+.game-stat { padding: 12px 8px; }
+.game-stat strong { font-size: 1.7rem; display: inline-block; }
+#timer.low { color: #d63b2f; animation: timerLow 0.8s infinite; }
+@keyframes timerLow { 50% { transform: scale(1.18); } }
+@media (prefers-reduced-motion: reduce) { #timer.low { animation: none; } }
+
+.reward-track { margin: 0 4px 22px; }
+.reward-bar {
+    position: relative;
+    height: 16px;
+    border-radius: 999px;
+    background: #e9efec;
+    overflow: visible;
+    margin-bottom: 26px;
+}
+.reward-fill {
+    height: 100%;
+    width: 0;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #fb911f, #2ce0bd);
+    transition: width 0.4s ease;
+}
+.reward-bar .tier {
+    position: absolute;
+    top: 22px;
+    transform: translateX(-50%);
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #888;
+    white-space: nowrap;
+}
+.reward-bar .tier::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: -9px;
+    width: 2px;
+    height: 12px;
+    background: #b9c5bf;
+}
+.reward-bar .t1 { left: 50%; }
+.reward-bar .t2 { left: 100%; transform: translateX(-100%); }
+.reward-bar .t2::before { left: auto; right: 0; }
+.reward-bar.t1-done .t1, .reward-bar.t2-done .t2 { color: #006a4e; }
+#rewardHint { text-align: center; color: #444; font-size: 0.9rem; margin: 0; }
+
+.objective { min-height: 150px; }
+.objective p { color: #555; }
+.game-photo { display: block; margin: 0 auto; width: min(100%, 320px); height: 190px; object-fit: cover; border-radius: 18px; box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18); background: #e8f4ef; }
+.game-clue { max-width: 620px; margin: 0 auto; font-weight: 500; font-style: italic; line-height: 1.5; }
+
+.game-board.names { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.game-board.photos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.game-board .dish-card {
+    background: #fff;
+    border: 2px solid #e3ebe7;
+    min-height: 0;
+    padding: 14px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+}
+.game-board .dish-card.name { min-height: 64px; font-size: 1.05rem; }
+.game-board .dish-card.photo { padding: 6px; }
+.game-board .dish-card.photo img { width: 100%; height: 130px; object-fit: cover; border-radius: 14px; display: block; background: #e8f4ef; }
+.game-board .dish-card:hover { border-color: #fb911f; }
+.game-board .dish-card.right { border-color: #1faa6b; background: #e6f8ee; }
+.game-board .dish-card.wrong { border-color: #d63b2f; background: #fdeceb; animation: shakeX 0.35s; }
+@keyframes shakeX { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+
+.game-result {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 22px 18px;
+    text-align: center;
+    background: #f4fbf8;
+    border: 1px solid #cfe9dd;
+    border-radius: 18px;
+}
+.game-result p { color: #333; margin: 0; }
+.game-result strong { color: #006a4e; }
+.game-result .btn1, .game-result .admin-button { margin: 0; cursor: pointer; text-decoration: none; }
+
+@media (max-width: 640px) {
+    .game-header { grid-template-columns: repeat(2, 1fr); }
+    .game-board.names, .game-board.photos { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .game-photo { height: 160px; }
+    .game-board .dish-card.photo img { height: 100px; }
+}
+
+/* récompense dans le formulaire de commande */
+.reward-box { margin: 18px 0 0; padding: 12px 14px; background: #fff7ea; border: 1px dashed #fb911f; border-radius: 10px; }
+.reward-box[hidden] { display: none; }
+.reward-box label { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 0.95rem; }
+.reward-box strong { color: #b35f00; }
