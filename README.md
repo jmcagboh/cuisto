@@ -23,11 +23,14 @@ Site en ligne : https://jmcagboh.github.io/cuisto/
   - visiteur sans compte : le message s'ouvre dans WhatsApp.
 - **Messages non lus** : quand le restaurant répond, une pastille rouge avec le nombre de messages non lus apparaît sur le bouton de messagerie (accueil et page des plats), le pied de page affiche « Messagerie (2) » et une notification prévient le client, même s'il a quitté la messagerie. Tout est remis à zéro dès qu'il ouvre la conversation.
 
+- **Bouton « Appeler »** flottant sur mobile ; **badge « Ouvert maintenant / Fermé · ouvre à… »** (heure du Togo) sur l'accueil et dans les horaires ; **étiquettes** sur certains plats du menu (Épicé, Grillé…).
+
 **Pour le restaurant** (`login.html` puis `admin.html`)
 - Commandes, réservations et messages de contact, avec changement de statut.
 - Messagerie clients : conversations regroupées par client, réponse en un clic.
 - Liens WhatsApp et Google Maps directs, actualisation automatique.
-- **Alertes en direct** : à chaque nouvelle commande, réservation ou message, une notification s'affiche, un son retentit et le nombre de nouveautés apparaît dans l'onglet (bouton « Activer les alertes »). Les alertes fonctionnent quand la page d'administration est ouverte.
+- **Alertes en direct** : à chaque nouvelle commande, réservation ou message, une notification s'affiche, un son retentit et le nombre de nouveautés apparaît dans l'onglet (bouton « Activer les alertes »). Ces alertes fonctionnent quand la page d'administration est ouverte.
+- **Alertes par e-mail** même page fermée : à chaque commande, réservation ou message, la base appelle la fonction Supabase `notify-admin`, qui envoie un e-mail au restaurant via Resend (secrets `RESEND_API_KEY` et `ADMIN_EMAIL`).
 
 **Règle WhatsApp**
 - Visiteur sans compte : la demande est enregistrée **puis** WhatsApp s'ouvre pour prévenir le restaurant.
@@ -59,6 +62,7 @@ Site en ligne : https://jmcagboh.github.io/cuisto/
 | `style.css` | **Tous** les styles du site, y compris login, admin et compte |
 | `animations.css` | Animations (chargé après `style.css`) |
 | `config.js` | Adresse du projet Supabase et clé publique |
+| `supabase/functions/notify-admin/index.ts` | Fonction Edge : envoi de l'e-mail d'alerte |
 | `schema.sql` | Structure complète de la base de données et règles de sécurité |
 | `images/` | Photos du site |
 
@@ -126,6 +130,9 @@ Pousser le dossier sur GitHub, puis activer **GitHub Pages** sur la branche prin
 
 ## Journal des évolutions
 
+- **2026-11-07 (suite)** : bouton « Appeler » sur mobile, badge Ouvert/Fermé calculé d'après les horaires, étiquettes sur le menu. Les horaires sont écrits dans `script.js` (constante `HOURS`) : à modifier en même temps que la section Contact.
+- **2026-11-07** : section « Que disent nos clients » refaite (le texte des avis était blanc sur fond blanc, donc illisible) : fond vert sombre, cartes à bandeau de couleur, guillemets, étoiles qui s'allument, étiquette par client, cartes de même hauteur.
+- **2026-10-31** : alertes par e-mail quand la page d'administration est fermée (extension `pg_net`, déclencheurs sur les 4 tables, fonction Edge `notify-admin`, secret partagé stocké dans le schéma privé `private`).
 - **2026-10-30** : compteur de messages non lus pour les clients (pastille sur le bouton de messagerie, pied de page, notification à leur retour sur le site, mise à zéro à l'ouverture de la conversation) ; horodatage des messages à l'heure réelle.
 - **2026-10-29 (soir)** : notifications visibles (toasts) sur toutes les actions du compte et des formulaires ; redirection vers le site après la création du compte, avec message de bienvenue ; informations du client (nom, téléphone, adresse) enregistrées automatiquement ; alertes en direct pour le restaurant (nouvelle commande, réservation, message) avec son et notification du navigateur ; police Poppins enfin appliquée (règle `font-family: calc()` invalide supprimée) ; chemin d'image erroné `./image/d1.jpg` retiré ; `is_admin()` retirée aux visiteurs ; chargement différé des images.
 - **2026-10-29** : messagerie directe pour les clients connectés (temps réel) et boîte de réponse dans l'administration ; commandes et réservations sans WhatsApp pour les clients connectés ; flèche « retour en haut » masquée sur mobile.
@@ -138,7 +145,7 @@ Pousser le dossier sur GitHub, puis activer **GitHub Pages** sur la branche prin
 
 - Renseigner le nom d'utilisateur Instagram (lien actuel : `https://www.instagram.com/`).
 - Activer « Leaked password protection » dans Supabase (Authentication → Sign In / Providers → Email → Password security) : refuse les mots de passe déjà piratés. Cette option peut être réservée aux offres payantes.
-- Recevoir les alertes même quand la page d'administration est fermée (e-mail ou WhatsApp automatique via une fonction Supabase).
+- Alertes e-mail : saisir les secrets `RESEND_API_KEY` et `ADMIN_EMAIL` dans Supabase (Edge Functions → Secrets). Telegram/WhatsApp automatique non utilisés.
 - Remplacer les descriptions provisoires (chefs, Veyi, Pokoumè).
 - Paiement mobile (Mobile Money).
 

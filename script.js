@@ -604,3 +604,40 @@ try {
     setTimeout(() => showToast(`Bienvenue ${welcome} ! Votre compte est créé ✓`, { href: '#menu', label: 'Voir le menu' }), 600);
   }
 } catch { /* ignoré */ }
+
+/* ---------- Badge « Ouvert / Fermé » (heure du Togo, mêmes horaires que la section Contact) ---------- */
+(function openBadge() {
+  const badges = document.querySelectorAll('[data-open-badge]');
+  if (!badges.length) return;
+  // [ouverture, fermeture] en heures, du dimanche (0) au samedi (6)
+  const HOURS = { 0: [12, 20], 1: [10, 22], 2: [10, 22], 3: [10, 22], 4: [10, 22], 5: [10, 22], 6: [10, 23] };
+  const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const fmt = (h) => `${h}h00`;
+
+  function status() {
+    const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Africa/Lome', weekday: 'short', hour: 'numeric', minute: 'numeric', hourCycle: 'h23' }).formatToParts(new Date());
+    const get = (type) => parts.find((p) => p.type === type)?.value;
+    const day = DAYS.indexOf(get('weekday'));
+    const now = Number(get('hour')) + Number(get('minute')) / 60;
+    const [open, close] = HOURS[day];
+    if (now >= open && now < close) {
+      return close - now <= 1
+        ? { cls: 'is-soon', text: `Ferme bientôt · ${fmt(close)}` }
+        : { cls: 'is-open', text: `Ouvert maintenant · jusqu'à ${fmt(close)}` };
+    }
+    if (now < open) return { cls: 'is-closed', text: `Fermé · ouvre à ${fmt(open)}` };
+    const next = HOURS[(day + 1) % 7][0];
+    return { cls: 'is-closed', text: `Fermé · ouvre demain à ${fmt(next)}` };
+  }
+
+  function paint() {
+    const { cls, text } = status();
+    badges.forEach((badge) => {
+      badge.hidden = false;
+      badge.className = badge.className.replace(/\bis-(open|soon|closed)\b/g, '').trim() + ` ${cls}`;
+      badge.textContent = text;
+    });
+  }
+  paint();
+  setInterval(paint, 60000);
+})();
