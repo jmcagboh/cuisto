@@ -22,6 +22,28 @@
     return rule ? [toHours(rule.open), toHours(rule.close)] : null;
   };
 
+
+  /* ---- photos modifiables depuis l'administration (accueil, à propos) ----
+     Les adresses viennent de la table site_images ; la dernière version connue est gardée dans le navigateur
+     pour que la bonne photo s'affiche dès le début du chargement. */
+  const safeUrl = (u) => (typeof u === 'string' && /^https?:\/\/[^\s"'()]+$/.test(u)) ? u : null;
+  window.applySiteImages = function (map) {
+    const hero = safeUrl(map && map.hero);
+    if (hero) root.style.setProperty('--hero-image', `url("${hero}")`);
+    else root.style.removeProperty('--hero-image');
+    const about = safeUrl(map && map.about);
+    document.querySelectorAll('[data-site-image="about"]').forEach((img) => {
+      if (!img.dataset.defaultSrc) img.dataset.defaultSrc = img.getAttribute('src');
+      img.src = about || img.dataset.defaultSrc;
+    });
+  };
+  let cachedImages = null;
+  try { cachedImages = JSON.parse(localStorage.getItem('cuistoSiteImages') || 'null'); } catch { /* ignoré */ }
+  if (cachedImages) {
+    const hero = safeUrl(cachedImages.hero);
+    if (hero) root.style.setProperty('--hero-image', `url("${hero}")`);
+  }
+
   const DEFAULT_NAME = 'Cuisto';
 
   function replaceName(text) {
@@ -99,7 +121,7 @@
     });
   }
 
-  function apply() { applyName(); applyLogo(); applyTexts(); }
+  function apply() { applyName(); applyLogo(); applyTexts(); if (cachedImages) window.applySiteImages(cachedImages); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply);
   else apply();
 })();

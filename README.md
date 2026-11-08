@@ -15,7 +15,7 @@ Site en ligne : https://jmcagboh.github.io/cuisto/
 - Commande avec total calculé, retrait ou livraison (adresse ou position GPS), paiement sur place ou à la livraison.
 - Réservation de table (date, heure, nombre de personnes).
 - Formulaire de contact, horaires, coordonnées, carte (qui ne zoome pas sans clic).
-- Page « Autres plats » (`plats.html`).
+- Page **« Carte complète »** (`plats.html`) : les autres plats de la carte, avec un bouton « Demander la disponibilité » : pour un client connecté, la demande arrive directement dans sa messagerie ; pour un visiteur, elle s'ouvre dans WhatsApp.
 - **Jeu « Le bon plat »** : reconnaître les plats du menu (photo → nom, ou description → photo) en 30 secondes, avec séries de bonnes réponses. **Récompense** pour les clients connectés : 100 points = −5 %, 200 points = −10 % sur une commande (une récompense par jour et par compte, valable 24 h, utilisable une seule fois). Le visiteur sans compte est invité à se connecter pour la débloquer.
 - **Compte client facultatif** (`compte.html`) : inscription / connexion, historique des commandes et réservations, modification du nom, du téléphone et de l'adresse de livraison habituelle. Après l'inscription, le client est envoyé directement sur le site (le lien de confirmation par e-mail le ramène aussi sur le site).
 - **Enregistrement automatique** des informations du client connecté : nom, téléphone et adresse sont mémorisés à chaque commande ou réservation et préremplis ensuite.
@@ -30,7 +30,8 @@ Site en ligne : https://jmcagboh.github.io/cuisto/
 **Pour le restaurant** (`login.html` puis `admin.html`)
 - Commandes, réservations et messages de contact, avec changement de statut.
 - Messagerie clients : conversations regroupées par client, réponse en un clic.
-- **Menu modifiable** (section « Menu » de `admin.html`) : ajouter, modifier, masquer ou supprimer un plat, changer son prix, sa description, son étiquette, son indice pour le jeu et sa **photo** (envoyée depuis le téléphone ou l'ordinateur). Le site, le formulaire de commande et le jeu se mettent à jour tout de suite ; les prix restent contrôlés par la base. Un plat déjà commandé ne se supprime pas : on le décoche « Visible sur le site ».
+- **Photos du site** : la photo de la page d'accueil et celle de « À propos » se changent depuis `admin.html` (section « Photos du site »), avec retour possible à la photo d'origine.
+- **Menu et carte complète modifiables** (section « Menu et carte complète » de `admin.html`) : ajouter, modifier, masquer ou supprimer un plat, changer son prix, sa description, son étiquette, son indice pour le jeu et sa **photo** (envoyée depuis le téléphone ou l'ordinateur). Le site, le formulaire de commande et le jeu se mettent à jour tout de suite ; les prix restent contrôlés par la base. Un plat déjà commandé ne se supprime pas : on le décoche « Visible sur le site ».
 - Liens WhatsApp et Google Maps directs, actualisation automatique.
 - **Alertes en direct** : à chaque nouvelle commande, réservation ou message, une notification s'affiche, un son retentit et le nombre de nouveautés apparaît dans l'onglet (bouton « Activer les alertes »). Ces alertes fonctionnent quand la page d'administration est ouverte.
 - **Alertes par e-mail** même page fermée : à chaque commande, réservation ou message, la base appelle la fonction Supabase `notify-admin`, qui envoie un e-mail au restaurant via Resend (secrets `RESEND_API_KEY` et `ADMIN_EMAIL`).
@@ -56,7 +57,7 @@ Site en ligne : https://jmcagboh.github.io/cuisto/
 |---|---|
 | `index.html` | Page principale (accueil, menu, commande, réservation, contact…) |
 | `script.js` | Logique de la page principale (commande, réservation, contact, menu cliquable, jeu, animations) |
-| `plats.html` | Autres plats |
+| `plats.html` + `plats.js` | Carte complète (plats chargés depuis Supabase, demande de disponibilité) |
 | `unread.js` | Pastille et notification des messages non lus (accueil et page des plats) |
 | `messages.html` + `chat.js` | Messagerie (mode compte ou mode WhatsApp) |
 | `compte.html` + `account.js` | Espace client (connexion, inscription, historique) |
@@ -135,19 +136,21 @@ Pousser le dossier sur GitHub, puis activer **GitHub Pages** sur la branche prin
 
 | Table | Contenu |
 |---|---|
-| `dishes` | Plats et prix (référence des prix) |
+| `dishes` | Plats, prix, photos et catégorie : `menu` (commandable) ou `carte` (carte complète). Référence des prix |
 | `orders`, `order_items` | Commandes et leurs lignes |
 | `reservations` | Réservations de table |
 | `contact_messages` | Messages du formulaire de contact |
 | `chat_messages` | Messagerie client ↔ restaurant |
 | `game_rewards` | Récompenses du jeu (pourcentage, expiration, utilisée ou non) |
 | `chat_reads` | Date du dernier message lu par chaque client (messages non lus) |
+| `site_images` | Photos de l'accueil et de « À propos » choisies par l'administrateur |
 | `admins` | Comptes administrateurs |
 
 ---
 
 ## Journal des évolutions
 
+- **2026-11-08 (soir)** : administration plus lisible (fiches de plats, groupes Menu / Carte complète) ; photos de l'accueil et de « À propos » modifiables ; page « Autres plats » renommée **« Carte complète »** et gérée depuis l'administration (catégorie `carte`) ; demande de disponibilité envoyée dans la messagerie pour un client connecté (WhatsApp pour un visiteur) ; seuls les plats du menu principal sont commandables (contrôle dans `create_order`).
 - **2026-11-08** : fichier unique de réglages `site.config.js` (identité, contacts, horaires, couleurs) et menu modifiable depuis l'administration (plats, prix, photos stockées dans Supabase Storage), avec règles de sécurité (seul l'administrateur écrit) ; `schema.sql` ne remet plus le menu à zéro quand on le relance.
 - **2026-11-07 (nuit)** : jeu refait avec les vraies photos du menu (plus aucun emoji), devinettes, séries, barre de progression vers la récompense, fin de partie qui propose de commander les plats ratés ; récompense −5 % / −10 % gérée par Supabase (`game_rewards`, `claim_game_reward`, `create_order` avec paramètre `p_reward`) ; la remise apparaît dans l'administration. **Correctif** : le déclencheur d'alertes e-mail faisait échouer les nouvelles commandes depuis le 2026-10-31 (corrigé).
 - **2026-11-07 (soir)** : mention « Projet de démonstration » dans le pied de page et le README. Bouton « Appeler » affiché uniquement sur mobile (écran ≤ 768 px).

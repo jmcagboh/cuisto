@@ -16,6 +16,9 @@ alter table public.dishes add column if not exists description text;
 alter table public.dishes add column if not exists image_url   text;
 alter table public.dishes add column if not exists tag         text;
 alter table public.dishes add column if not exists game_clue   text;
+alter table public.dishes add column if not exists category    text not null default 'menu';
+alter table public.dishes drop constraint if exists dishes_category_check;
+alter table public.dishes add constraint dishes_category_check check (category in ('menu', 'carte'));
 
 alter table public.dishes drop constraint if exists dishes_text_lengths;
 alter table public.dishes add constraint dishes_text_lengths check (
@@ -37,6 +40,23 @@ insert into public.dishes (slug, name, price, sort_order, description, image_url
     ('attieke',   'Attiéké',   2500, 7, 'Attiéké fin et léger, accompagné de poisson braisé et d’oignons.', 'images/attieke.jpg', '🐟 Poisson braisé', 'Semoule de manioc fine et légère, avec poisson braisé et oignons'),
     ('akoume',    'Akoumè',    3000, 8, 'Pâte de maïs (akoumè) servie avec la sauce adémè bien onctueuse.', 'images/akoume.jpg', null, 'Pâte de maïs servie avec la sauce adémè bien onctueuse'),
     ('pokoume',   'Pokoumè',   3000, 9, 'Pâte moelleuse servie avec sa sauce et sa viande, façon togolaise.', 'images/pokoume.jpg', null, 'Pâte moelleuse servie avec sa sauce et sa viande, façon togolaise')
+on conflict (slug) do nothing;
+
+-- Carte complète de départ (page plats.html) : n'écrase jamais les modifications de l'administration
+insert into public.dishes (slug, name, price, sort_order, description, image_url, category) values
+    ('poulet-roti',      'Poulet roti',        5000,  1, 'Un poulet bien doré pour réveiller vos papilles.', 'images/roti.jpg', 'carte'),
+    ('viande-de-boeuf',  'Viande de boeuf',    2500,  2, 'De la viande de bœuf bien juteuse.', 'images/viande.jpg', 'carte'),
+    ('special-ayimolou', 'Spécial ayimolou',   1000,  3, 'Riz aux haricots présenté en assiette composée, avec poisson, œuf et sauces.', 'images/ayimolou.jpg', 'carte'),
+    ('tecon',            'Técon',              1500,  4, 'Técon avec friture et poisson.', 'images/teconn.jpg', 'carte'),
+    ('special-akpama',   'Special Akpama',     2000,  5, 'Un Akpama bien moelleux.', 'images/viande1.jpg', 'carte'),
+    ('com',              'Com',                1500,  6, 'Une pâte de maïs accompagnée de poisson, moulée et servie chaude.', 'images/com.jpg', 'carte'),
+    ('pinon',            'Pinon',              1500,  7, 'Une pâte de garri accompagnée de dindon, moulée et servie chaude.', 'images/pinon.jpg', 'carte'),
+    ('riz-au-gras',      'Riz au gras',        2000,  8, 'Du riz accompagné de cuisse de poulet et de légumineuse.', 'images/riz_au_gras.jpg', 'carte'),
+    ('salade',           'Salade',             2000,  9, 'Un mélange de légumes.', 'images/avocat.jpg', 'carte'),
+    ('frites',           'Frites',              800, 10, 'Des frites accompagnées de viande.', 'images/frite1.jpg', 'carte'),
+    ('indomi',           'Indomi',             1800, 11, 'Des spaghetti accompagnés de viande.', 'images/indomi.jpg', 'carte'),
+    ('riz-blanc-carte',  'Riz blanc',          1000, 12, 'Riz blanc avec de la sardine et un œuf, accompagné de piment vert.', 'images/riz.jpg', 'carte'),
+    ('ablo',             'Ablo',               1000, 13, 'Une pâte de maïs moulée accompagnée de poulet.', 'images/ablo.jpg', 'carte')
 on conflict (slug) do nothing;
 
 -- ---------- Administrateurs ----------
@@ -179,7 +199,8 @@ begin
 
     for v_item in select * from jsonb_array_elements(p_items) loop
         v_qty := (v_item ->> 'quantity')::integer;
-        select * into v_dish from public.dishes where slug = v_item ->> 'slug' and available;
+        select * into v_dish from public.dishes
+         where slug = v_item ->> 'slug' and available and category = 'menu';
         if not found then
             raise exception 'Aucun plat valide';
         end if;
@@ -544,3 +565,26 @@ create policy dish_images_admin_update on storage.objects for update to authenti
 drop policy if exists dish_images_admin_delete on storage.objects;
 create policy dish_images_admin_delete on storage.objects for delete to authenticated
     using (bucket_id = 'dish-images' and public.is_admin());
+
+-- ============================================================
+-- Photos du site (accueil, à propos) modifiables par l'administrateur
+-- (les fichiers sont dans le bucket « dish-images », dossier site/)
+-- ============================================================
+create table if not exists public.site_images (
+    key        text primary key check (key ~ '^[a-z0-9_-]{1,30}$'),
+    url        text not null check (char_length(url) <= 500),
+    updated_at timestamptz not null default now()
+);
+alter table public.site_images enable row level security;
+drop policy if exists site_images_read on public.site_images;
+create policy site_images_read on public.site_images for select to anon, authenticated using (true);
+drop policy if exists site_images_admin_insert on public.site_images;
+create policy site_images_admin_insert on public.site_images for insert to authenticated with check (public.is_admin());
+drop policy if exists site_images_admin_update on public.site_images;
+create policy site_images_admin_update on public.site_images for update to authenticated
+    using (public.is_admin()) with check (public.is_admin());
+drop policy if exists site_images_admin_delete on public.site_images;
+create policy site_images_admin_delete on public.site_images for delete to authenticated using (public.is_admin());
+revoke all on public.site_images from anon, authenticated;
+grant select on public.site_images to anon, authenticated;
+grant insert, update, delete on public.site_images to authenticated;

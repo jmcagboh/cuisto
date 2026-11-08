@@ -43,11 +43,20 @@
             <div id="chatList" class="convo-list"><p class="empty">Chargement...</p></div>
         </div>
 
+        <div class="admin-block" id="siteImagesBlock">
+            <h2>Photos du site</h2>
+            <p class="admin-help">Changez la photo de la page d'accueil et celle de la section « À propos ». La nouvelle photo remplace l'ancienne tout de suite sur le site.</p>
+            <div id="siteImages" class="site-photo-list"><p class="empty">Chargement...</p></div>
+        </div>
+
         <div class="admin-block" id="menuBlock">
-            <h2>Menu et prix <span id="dishCount" class="count zero">0</span></h2>
-            <p class="admin-help">Les changements apparaissent tout de suite sur le site (menu, commande et jeu). Pour retirer un plat sans le supprimer, décochez « Visible sur le site ».</p>
+            <h2>Menu et carte complète <span id="dishCount" class="count zero">0</span></h2>
+            <p class="admin-help">Les changements apparaissent tout de suite sur le site. Le <strong>menu principal</strong> se commande en ligne (et alimente le jeu). La <strong>carte complète</strong> liste les autres plats, avec une demande de disponibilité. Pour retirer un plat sans le supprimer, décochez « Visible sur le site ».</p>
+            <div class="dish-add-bar">
+                <button id="addDish" class="admin-button" type="button">+ Ajouter au menu principal</button>
+                <button id="addCarte" class="admin-button secondary" type="button">+ Ajouter à la carte complète</button>
+            </div>
             <div id="dishList" class="dish-admin-list"><p class="empty">Chargement...</p></div>
-            <button id="addDish" class="admin-button" type="button">+ Ajouter un plat</button>
         </div>
 
         <div class="admin-block">
@@ -417,8 +426,12 @@
                     <label>Prix (FCFA)<input name="price" type="number" min="0" max="1000000" step="50" value="${esc(d.price ?? '')}" required></label>
                     <label class="wide">Description<textarea name="description" maxlength="300" rows="2">${esc(d.description || '')}</textarea></label>
                     <label>Étiquette (facultatif)<input name="tag" value="${esc(d.tag || '')}" maxlength="24" placeholder="Ex : Épicé"></label>
+                    <label>Où l'afficher ?<select name="category">
+                        <option value="menu" ${d.category === 'carte' ? '' : 'selected'}>Menu principal (commande en ligne)</option>
+                        <option value="carte" ${d.category === 'carte' ? 'selected' : ''}>Carte complète (sur demande)</option>
+                    </select></label>
                     <label>Ordre d'affichage<input name="sort_order" type="number" min="0" max="999" value="${esc(d.sort_order ?? 0)}"></label>
-                    <label class="wide">Indice du jeu (facultatif, sans le nom du plat)<input name="game_clue" value="${esc(d.game_clue || '')}" maxlength="200" placeholder="Ex : Frites d'igname croustillantes avec du piment"></label>
+                    <label class="wide game-clue-field">Indice du jeu (facultatif, sans le nom du plat)<input name="game_clue" value="${esc(d.game_clue || '')}" maxlength="200" placeholder="Ex : Frites d'igname croustillantes avec du piment"></label>
                     <label class="check"><input name="available" type="checkbox" ${d.available === false ? '' : 'checked'}> Visible sur le site</label>
                 </div>
                 <div class="dish-admin-actions">
@@ -430,12 +443,16 @@
 
         async function loadDishes() {
             const { data, error } = await sb.from('dishes')
-                .select('slug, name, price, description, image_url, tag, game_clue, available, sort_order')
+                .select('slug, name, price, description, image_url, tag, game_clue, available, sort_order, category')
                 .order('sort_order').order('name');
             if (error) { $('dishList').innerHTML = '<p class="empty">Impossible de charger le menu.</p>'; return; }
             $('dishCount').textContent = String(data.length);
             $('dishCount').classList.toggle('zero', data.length === 0);
-            $('dishList').innerHTML = data.length ? data.map((d) => dishCard(d)).join('') : '<p class="empty">Aucun plat. Ajoutez le premier !</p>';
+            const group = (title, rows) => (rows.length
+                ? `<h3 class="dish-group-title">${title} <span class="count">${rows.length}</span></h3>${rows.map((d) => dishCard(d)).join('')}` : '');
+            $('dishList').innerHTML = data.length
+                ? group('Menu principal', data.filter((d) => d.category !== 'carte')) + group('Carte complète', data.filter((d) => d.category === 'carte'))
+                : '<p class="empty">Aucun plat. Ajoutez le premier !</p>';
             $('dishList').dataset.next = String((data.reduce((m, d) => Math.max(m, d.sort_order || 0), 0)) + 1);
         }
 
@@ -505,6 +522,7 @@
                 description: f.description.value.trim() || null,
                 tag: f.tag.value.trim() || null,
                 game_clue: f.game_clue.value.trim() || null,
+                category: f.category.value === 'carte' ? 'carte' : 'menu',
                 sort_order: Math.max(0, Math.round(Number(f.sort_order.value) || 0)),
                 available: f.available.checked,
                 image_url: form.dataset.newImage || form.dataset.image || null
@@ -532,10 +550,14 @@
         });
 
         document.addEventListener('click', async (event) => {
-            if (event.target.closest('#addDish')) {
+            const addButton = event.target.closest('#addDish, #addCarte');
+            if (addButton) {
                 if (document.querySelector('form.dish-admin[data-new="1"]')) return;
-                $('dishList').insertAdjacentHTML('afterbegin', dishCard({ sort_order: Number($('dishList').dataset.next || 1), available: true }, true));
-                $('dishList').querySelector('form[data-new="1"] input[name="name"]').focus();
+                const category = addButton.id === 'addCarte' ? 'carte' : 'menu';
+                $('dishList').insertAdjacentHTML('afterbegin', dishCard({ sort_order: Number($('dishList').dataset.next || 1), available: true, category }, true));
+                const fresh = $('dishList').querySelector('form[data-new="1"]');
+                fresh.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                fresh.querySelector('input[name="name"]').focus();
                 return;
             }
             if (event.target.closest('[data-cancel-dish]')) { event.target.closest('form').remove(); return; }
@@ -556,6 +578,81 @@
             loadDishes();
         });
 
+        /* ---------- photos du site (accueil, à propos) ---------- */
+        const SITE_SLOTS = [
+            { key: 'hero', label: "Photo d'accueil (grande bannière)", fallback: 'images/acueil.jpg', max: 1600, hint: 'De préférence une photo large (horizontale).' },
+            { key: 'about', label: 'Photo « À propos »', fallback: 'images/foufou.jpg', max: 1000, hint: 'Photo du restaurant, d\'un plat ou de l\'équipe.' }
+        ];
+        let siteImageMap = new Map();
+
+        async function loadSiteImages() {
+            const { data, error } = await sb.from('site_images').select('key, url');
+            if (error) { $('siteImages').innerHTML = '<p class="empty">Impossible de charger les photos.</p>'; return; }
+            siteImageMap = new Map(data.map((row) => [row.key, row.url]));
+            $('siteImages').innerHTML = SITE_SLOTS.map((slot) => {
+                const custom = siteImageMap.get(slot.key);
+                return `<div class="site-photo" data-key="${slot.key}">
+                    <img src="${esc(custom || photoSrc(slot.fallback))}" alt="">
+                    <div class="site-photo-info">
+                        <strong>${esc(slot.label)}</strong>
+                        <p>${esc(slot.hint)} ${custom ? 'Photo personnalisée.' : 'Photo d\'origine du site.'}</p>
+                        <div class="site-photo-actions">
+                            <label class="admin-button">Changer la photo<input type="file" accept="image/jpeg,image/png,image/webp" hidden data-site-photo="${slot.key}"></label>
+                            ${custom ? `<button type="button" class="admin-button secondary" data-site-reset="${slot.key}">Revenir à la photo d'origine</button>` : ''}
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        document.addEventListener('change', async (event) => {
+            const input = event.target.closest('input[data-site-photo]');
+            if (!input || !input.files[0]) return;
+            const slot = SITE_SLOTS.find((item) => item.key === input.dataset.sitePhoto);
+            say('Envoi de la photo...');
+            try {
+                const blob = await resizeImage(input.files[0], slot.max);
+                const path = `site/${slot.key}-${Date.now()}.jpg`;
+                const { error } = await sb.storage.from('dish-images').upload(path, blob, { contentType: 'image/jpeg' });
+                if (error) throw error;
+                const { data } = sb.storage.from('dish-images').getPublicUrl(path);
+                const previous = siteImageMap.get(slot.key);
+                const saved = await sb.from('site_images').upsert({ key: slot.key, url: data.publicUrl, updated_at: new Date().toISOString() });
+                if (saved.error) throw saved.error;
+                if (previous) removeOldImage(previous);
+                say(`${slot.label} : photo mise à jour ✓ Elle est déjà visible sur le site.`);
+                loadSiteImages();
+            } catch (error) {
+                console.error(error);
+                say('Envoi de la photo impossible (JPEG, PNG ou WebP, 2 Mo maximum).', true);
+            }
+            input.value = '';
+        });
+
+        document.addEventListener('click', async (event) => {
+            const reset = event.target.closest('[data-site-reset]');
+            if (!reset) return;
+            const key = reset.dataset.siteReset;
+            if (!window.confirm("Revenir à la photo d'origine du site ?")) return;
+            const previous = siteImageMap.get(key);
+            const { error } = await sb.from('site_images').delete().eq('key', key);
+            if (error) { say('Opération impossible.', true); return; }
+            if (previous) removeOldImage(previous);
+            say("Photo d'origine rétablie ✓");
+            loadSiteImages();
+        });
+
+        // l'indice du jeu ne concerne que les plats du menu principal
+        function syncClueField(form) {
+            const field = form.querySelector('.game-clue-field');
+            if (field) field.hidden = form.elements.category.value === 'carte';
+        }
+        document.addEventListener('change', (event) => {
+            if (event.target.matches('form.dish-admin select[name="category"]')) syncClueField(event.target.closest('form'));
+        });
+        new MutationObserver(() => document.querySelectorAll('form.dish-admin').forEach(syncClueField))
+            .observe($('dishList'), { childList: true });
+
         $('adminRefresh').addEventListener('click', loadAll);
         $('adminLogout').addEventListener('click', async () => {
             await sb.auth.signOut();
@@ -566,6 +663,7 @@
             if (!allowed) return;
             loadAll();
             loadDishes();
+            loadSiteImages();
             // actualisation automatique toutes les 45 s, sauf pendant l'utilisation d'une liste ou d'une réponse
             setInterval(() => { if (!document.activeElement?.matches('select, textarea')) loadAll(); }, 45000);
             // nouvelles demandes : affichage et alerte immédiats

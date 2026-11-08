@@ -893,7 +893,7 @@ async function loadMenu() {
   try {
     const { data, error } = await sb.from('dishes')
       .select('slug, name, price, description, image_url, tag, game_clue')
-      .eq('available', true).order('sort_order').order('name');
+      .eq('available', true).eq('category', 'menu').order('sort_order').order('name');
     if (error || !Array.isArray(data)) return;
 
     const quantities = new Map([...orderList.querySelectorAll('[data-slug]')].map((i) => [i.dataset.slug, i.value]));
@@ -914,3 +914,16 @@ async function loadMenu() {
 }
 
 loadMenu();
+
+/* ---------- Photos de l'accueil et de « À propos » (gérées dans l'administration) ---------- */
+async function loadSiteImages() {
+  if (!sb || !window.applySiteImages) return;
+  try {
+    const { data, error } = await sb.from('site_images').select('key, url');
+    if (error || !Array.isArray(data)) return;
+    const map = Object.fromEntries(data.map((row) => [row.key, row.url]));
+    try { localStorage.setItem('cuistoSiteImages', JSON.stringify(map)); } catch { /* ignoré */ }
+    window.applySiteImages(map);
+  } catch (error) { console.error(error); }
+}
+loadSiteImages();
