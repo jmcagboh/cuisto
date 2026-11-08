@@ -149,7 +149,7 @@ header {
 
 .order-items label:hover,
 .order-items label:focus-within {
-    border-color: #006a4e;
+    border-color: var(--brand);
     box-shadow: 0 6px 16px rgba(0, 106, 78, 0.15);
     transform: translateY(-2px);
 }
@@ -287,7 +287,7 @@ header {
 .chat-fab:hover svg { animation: iconWiggle 0.6s ease; }
 
 .chat-chip, .chat-send, .chat-clear { transition: transform 0.2s var(--ease-out), background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease; }
-.chat-chip:hover { transform: translateY(-2px); background: #006a4e; color: #fff; }
+.chat-chip:hover { transform: translateY(-2px); background: var(--brand); color: #fff; }
 .chat-send:hover { transform: scale(1.1) rotate(-8deg); box-shadow: 0 8px 18px rgba(0, 106, 78, 0.35); }
 .chat-send:active, .chat-chip:active { transform: scale(0.93); }
 
@@ -311,4 +311,20 @@ header {
     .js .reveal:not(.in-view) {
         opacity: 1;
     }
+}
+
+/* ---------- Avis : les étoiles s'allument une à une ---------- */
+@keyframes starPop {
+    0%   { opacity: 0; transform: scale(0.3) rotate(-30deg); }
+    70%  { transform: scale(1.25) rotate(6deg); }
+    100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+.temoignage .stars span { opacity: 0; }
+.temoignage .box.in-view .stars span { animation: starPop 0.5s var(--ease-out) forwards; }
+.temoignage .box.in-view .stars span:nth-child(2) { animation-delay: 0.1s; }
+.temoignage .box.in-view .stars span:nth-child(3) { animation-delay: 0.2s; }
+.temoignage .box.in-view .stars span:nth-child(4) { animation-delay: 0.3s; }
+.temoignage .box.in-view .stars span:nth-child(5) { animation-delay: 0.4s; }
+@media (prefers-reduced-motion: reduce) {
+    .temoignage .stars span { opacity: 1; animation: none !important; }
 }

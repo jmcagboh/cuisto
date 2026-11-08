@@ -3,7 +3,8 @@
    - Client connecté : discussion directe avec le restaurant (Supabase, en temps réel).
    - Visiteur sans compte : le message s'ouvre dans WhatsApp, la conversation reste sur l'appareil.
    ============================================================ */
-const WHATSAPP_NUMBER = '22871645867';
+const WHATSAPP_NUMBER = window.SITE?.whatsapp || '22871645867';
+const SITE_NAME = window.SITE?.name || 'Cuisto';
 const STORAGE_KEY = 'cuistoChat';
 const NAME_KEY = 'cuistoChatName';
 
@@ -75,14 +76,14 @@ function cuistoReply(text) {
 }
 
 function deliverViaWhatsApp(name, text) {
-  const body = `Bonjour Cuisto, c'est ${name}.\n${text}`;
+  const body = `Bonjour ${SITE_NAME}, c'est ${name}.\n${text}`;
   window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(body)}`, '_blank', 'noopener');
 }
 
 function localWelcome() {
   messages = [];
   chatLog.replaceChildren();
-  addLocalMessage('cuisto', 'Bonjour et bienvenue chez Cuisto ! Une commande, une réservation ou une question ? Écrivez-nous ici, nous vous répondons sur WhatsApp.');
+  addLocalMessage('cuisto', `Bonjour et bienvenue chez ${SITE_NAME} ! Une commande, une réservation ou une question ? Écrivez-nous ici, nous vous répondons sur WhatsApp.`);
 }
 
 function startGuestMode() {
@@ -181,7 +182,7 @@ async function startAccountMode(user) {
   chatName.required = false;
   chatName.value = account.name || 'Client';
   if (chatBanner) chatBanner.hidden = true;
-  if (chatSubtitle) chatSubtitle.textContent = 'Discussion directe avec Cuisto';
+  if (chatSubtitle) chatSubtitle.textContent = `Discussion directe avec ${SITE_NAME}`;
   if (chatNote) chatNote.textContent = 'Vos messages sont enregistrés dans votre compte : nous vous répondons ici.';
   chatClear.hidden = true;
   await loadConversation();

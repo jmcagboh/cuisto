@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
+    <script src="site.config.js"></script>
+    <script src="site.js"></script>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="animations.css">
     <title>Administration | Cuisto</title>
@@ -11,7 +13,7 @@
 <body class="admin-page">
     <main class="admin-shell">
         <header class="admin-header">
-            <a class="auth-logo" href="index.html"><span>C</span>uisto</a>
+            <a class="auth-logo" href="index.html" data-logo data-split="1"><span>C</span>uisto</a>
             <div class="admin-tools">
                 <span id="adminUser" class="admin-user"></span>
                 <span id="adminUpdated" class="admin-updated"></span>
@@ -23,6 +25,7 @@
 
         <p class="auth-kicker">Tableau de bord</p>
         <h1 class="admin-title">Demandes des clients</h1>
+        <p class="admin-help"><a href="#menuBlock">Gérer le menu et les prix ↓</a></p>
         <p id="adminMessage" class="auth-message" role="status" aria-live="polite"></p>
 
         <div class="admin-block">
@@ -38,6 +41,13 @@
         <div class="admin-block">
             <h2>Messagerie clients <span id="chatCount" class="count zero">0</span></h2>
             <div id="chatList" class="convo-list"><p class="empty">Chargement...</p></div>
+        </div>
+
+        <div class="admin-block" id="menuBlock">
+            <h2>Menu et prix <span id="dishCount" class="count zero">0</span></h2>
+            <p class="admin-help">Les changements apparaissent tout de suite sur le site (menu, commande et jeu). Pour retirer un plat sans le supprimer, décochez « Visible sur le site ».</p>
+            <div id="dishList" class="dish-admin-list"><p class="empty">Chargement...</p></div>
+            <button id="addDish" class="admin-button" type="button">+ Ajouter un plat</button>
         </div>
 
         <div class="admin-block">
@@ -389,6 +399,163 @@
             select.closest('.record')?.classList.remove('is-new');
         });
 
+
+        /* ---------- menu : plats, prix, photos ---------- */
+        const slugify = (name) => String(name).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'plat';
+        const photoSrc = (url) => (!url ? '' : /^(https?:|\/|\.)/.test(url) ? url : `../${url}`.replace('../', './'));
+
+        function dishCard(d, isNew = false) {
+            const id = isNew ? 'new' : d.slug;
+            return `<form class="dish-admin" data-slug="${esc(id)}" data-new="${isNew ? '1' : ''}" data-image="${esc(d.image_url || '')}">
+                <div class="dish-admin-photo">
+                    ${d.image_url ? `<img src="${esc(photoSrc(d.image_url))}" alt="">` : '<div class="dish-admin-noimg">Pas de photo</div>'}
+                    <label class="admin-button secondary">Changer la photo<input type="file" accept="image/jpeg,image/png,image/webp" hidden data-photo></label>
+                </div>
+                <div class="dish-admin-fields">
+                    <label>Nom<input name="name" value="${esc(d.name || '')}" maxlength="60" required></label>
+                    <label>Prix (FCFA)<input name="price" type="number" min="0" max="1000000" step="50" value="${esc(d.price ?? '')}" required></label>
+                    <label class="wide">Description<textarea name="description" maxlength="300" rows="2">${esc(d.description || '')}</textarea></label>
+                    <label>Étiquette (facultatif)<input name="tag" value="${esc(d.tag || '')}" maxlength="24" placeholder="Ex : Épicé"></label>
+                    <label>Ordre d'affichage<input name="sort_order" type="number" min="0" max="999" value="${esc(d.sort_order ?? 0)}"></label>
+                    <label class="wide">Indice du jeu (facultatif, sans le nom du plat)<input name="game_clue" value="${esc(d.game_clue || '')}" maxlength="200" placeholder="Ex : Frites d'igname croustillantes avec du piment"></label>
+                    <label class="check"><input name="available" type="checkbox" ${d.available === false ? '' : 'checked'}> Visible sur le site</label>
+                </div>
+                <div class="dish-admin-actions">
+                    <button class="admin-button" type="submit">${isNew ? 'Ajouter' : 'Enregistrer'}</button>
+                    ${isNew ? '<button class="admin-button secondary" type="button" data-cancel-dish>Annuler</button>' : '<button class="admin-button secondary danger" type="button" data-delete-dish>Supprimer</button>'}
+                </div>
+            </form>`;
+        }
+
+        async function loadDishes() {
+            const { data, error } = await sb.from('dishes')
+                .select('slug, name, price, description, image_url, tag, game_clue, available, sort_order')
+                .order('sort_order').order('name');
+            if (error) { $('dishList').innerHTML = '<p class="empty">Impossible de charger le menu.</p>'; return; }
+            $('dishCount').textContent = String(data.length);
+            $('dishCount').classList.toggle('zero', data.length === 0);
+            $('dishList').innerHTML = data.length ? data.map((d) => dishCard(d)).join('') : '<p class="empty">Aucun plat. Ajoutez le premier !</p>';
+            $('dishList').dataset.next = String((data.reduce((m, d) => Math.max(m, d.sort_order || 0), 0)) + 1);
+        }
+
+        // photo réduite (900 px max) avant l'envoi : plus rapide pour les clients
+        function resizeImage(file, maxSide = 900) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                const url = URL.createObjectURL(file);
+                img.onload = () => {
+                    const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.round(img.width * scale);
+                    canvas.height = Math.round(img.height * scale);
+                    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                    URL.revokeObjectURL(url);
+                    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('Image illisible'))), 'image/jpeg', 0.85);
+                };
+                img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image illisible')); };
+                img.src = url;
+            });
+        }
+
+        const BUCKET_MARK = '/storage/v1/object/public/dish-images/';
+        async function removeOldImage(url) {
+            const i = String(url || '').indexOf(BUCKET_MARK);
+            if (i === -1) return; // photo du dossier images/ : on ne la touche pas
+            await sb.storage.from('dish-images').remove([url.slice(i + BUCKET_MARK.length)]);
+        }
+
+        document.addEventListener('change', async (event) => {
+            const input = event.target.closest('input[data-photo]');
+            if (!input || !input.files[0]) return;
+            const form = input.closest('form.dish-admin');
+            const name = form.elements.name.value || 'plat';
+            say('Envoi de la photo...');
+            try {
+                const blob = await resizeImage(input.files[0]);
+                const path = `${slugify(name)}-${Date.now()}.jpg`;
+                const { error } = await sb.storage.from('dish-images').upload(path, blob, { contentType: 'image/jpeg' });
+                if (error) throw error;
+                const { data } = sb.storage.from('dish-images').getPublicUrl(path);
+                form.dataset.newImage = data.publicUrl;
+                const box = form.querySelector('.dish-admin-photo');
+                box.querySelector('img, .dish-admin-noimg')?.remove();
+                const preview = document.createElement('img');
+                preview.src = data.publicUrl;
+                preview.alt = '';
+                box.prepend(preview);
+                say('Photo prête : cliquez sur « Enregistrer » pour la publier.');
+            } catch (error) {
+                console.error(error);
+                say('Envoi de la photo impossible (JPEG, PNG ou WebP, 2 Mo maximum).', true);
+            }
+            input.value = '';
+        });
+
+        document.addEventListener('submit', async (event) => {
+            const form = event.target.closest('form.dish-admin');
+            if (!form) return;
+            event.preventDefault();
+            const f = form.elements;
+            const price = Math.round(Number(f.price.value));
+            if (!f.name.value.trim() || !Number.isFinite(price) || price < 0) { say('Indiquez un nom et un prix valides.', true); return; }
+            const row = {
+                name: f.name.value.trim(),
+                price,
+                description: f.description.value.trim() || null,
+                tag: f.tag.value.trim() || null,
+                game_clue: f.game_clue.value.trim() || null,
+                sort_order: Math.max(0, Math.round(Number(f.sort_order.value) || 0)),
+                available: f.available.checked,
+                image_url: form.dataset.newImage || form.dataset.image || null
+            };
+            const button = form.querySelector('[type="submit"]');
+            button.disabled = true;
+            let error = null;
+            if (form.dataset.new) {
+                const taken = new Set([...document.querySelectorAll('form.dish-admin[data-slug]')].map((el) => el.dataset.slug));
+                let slug = slugify(row.name); let n = 2;
+                while (taken.has(slug)) slug = `${slugify(row.name)}-${n++}`;
+                ({ error } = await sb.from('dishes').insert({ slug, ...row }));
+            } else {
+                ({ error } = await sb.from('dishes').update(row).eq('slug', form.dataset.slug));
+                if (!error && form.dataset.newImage && form.dataset.image) removeOldImage(form.dataset.image);
+            }
+            button.disabled = false;
+            if (error) {
+                console.error(error);
+                say(error.code === '23505' ? 'Un plat porte déjà ce nom.' : 'Enregistrement impossible.', true);
+                return;
+            }
+            say(`« ${row.name} » enregistré ✓ Le site est à jour.`);
+            loadDishes();
+        });
+
+        document.addEventListener('click', async (event) => {
+            if (event.target.closest('#addDish')) {
+                if (document.querySelector('form.dish-admin[data-new="1"]')) return;
+                $('dishList').insertAdjacentHTML('afterbegin', dishCard({ sort_order: Number($('dishList').dataset.next || 1), available: true }, true));
+                $('dishList').querySelector('form[data-new="1"] input[name="name"]').focus();
+                return;
+            }
+            if (event.target.closest('[data-cancel-dish]')) { event.target.closest('form').remove(); return; }
+            const del = event.target.closest('[data-delete-dish]');
+            if (!del) return;
+            const form = del.closest('form.dish-admin');
+            const name = form.elements.name.value;
+            if (!window.confirm(`Supprimer définitivement « ${name} » ?`)) return;
+            const { error } = await sb.from('dishes').delete().eq('slug', form.dataset.slug);
+            if (error) {
+                say(error.code === '23503'
+                    ? `« ${name} » a déjà été commandé : décochez « Visible sur le site » pour le retirer du menu.`
+                    : 'Suppression impossible.', true);
+                return;
+            }
+            if (form.dataset.image) removeOldImage(form.dataset.image);
+            say(`« ${name} » supprimé.`);
+            loadDishes();
+        });
+
         $('adminRefresh').addEventListener('click', loadAll);
         $('adminLogout').addEventListener('click', async () => {
             await sb.auth.signOut();
@@ -398,6 +565,7 @@
         guard().then((allowed) => {
             if (!allowed) return;
             loadAll();
+            loadDishes();
             // actualisation automatique toutes les 45 s, sauf pendant l'utilisation d'une liste ou d'une réponse
             setInterval(() => { if (!document.activeElement?.matches('select, textarea')) loadAll(); }, 45000);
             // nouvelles demandes : affichage et alerte immédiats

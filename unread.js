@@ -73,7 +73,7 @@
     try {
       if (count > 0 && sessionStorage.getItem('cuistoUnreadSeen') !== String(count)) {
         sessionStorage.setItem('cuistoUnreadSeen', String(count));
-        setTimeout(() => notify(`Cuisto vous a répondu : ${plural(count)}`), 1500);
+        setTimeout(() => notify(`${window.SITE?.name || 'Cuisto'} vous a répondu : ${plural(count)}`), 1500);
       }
     } catch { /* ignoré */ }
 
@@ -84,7 +84,7 @@
         async (payload) => {
           if (payload.new.sender !== 'admin') return;
           await refresh();
-          notify('Cuisto vous a répondu dans la messagerie');
+          notify(`${window.SITE?.name || 'Cuisto'} vous a répondu dans la messagerie`);
         })
       .subscribe();
 

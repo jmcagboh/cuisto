@@ -4,7 +4,8 @@
    Pour commander et réserver, WhatsApp s'ouvre aussi pour prévenir le restaurant ;
    si l'enregistrement échoue, WhatsApp reste le moyen d'envoi.
    ============================================================ */
-const WHATSAPP_NUMBER = '22871645867';
+const WHATSAPP_NUMBER = window.SITE?.whatsapp || '22871645867';
+const SITE_NAME = window.SITE?.name || 'Cuisto';
 
 /* ---------- utilitaires ---------- */
 function setStatus(element, text, isError = false) {
@@ -156,7 +157,7 @@ reservationForm?.addEventListener('submit', async (event) => {
 
   if (!saved) showToast('Enregistrement impossible : utilisez WhatsApp pour envoyer la réservation.', null, 'error');
   finishWithWhatsApp(tab, [
-    'Bonjour Cuisto, je souhaite réserver une table.',
+    `Bonjour ${SITE_NAME}, je souhaite réserver une table.`,
     `Nom : ${name}`,
     `Téléphone : ${phone}`,
     `Date : ${new Date(`${date}T00:00`).toLocaleDateString('fr-FR')}`,
@@ -299,7 +300,7 @@ orderForm?.addEventListener('submit', async (event) => {
 
   if (!saved) showToast('Enregistrement impossible : utilisez WhatsApp pour envoyer la commande.', null, 'error');
   finishWithWhatsApp(tab, [
-    'Bonjour Cuisto, je souhaite passer une commande :',
+    `Bonjour ${SITE_NAME}, je souhaite passer une commande :`,
     ...items.map((item) => `- ${item.quantity} x ${item.name} (${formatPrice(item.price * item.quantity)})`),
     `Total : ${formatPrice(total)}`,
     isDelivery ? 'Mode : Livraison' : 'Mode : À emporter',
@@ -347,7 +348,7 @@ function showToast(text, link = { href: '#commande', label: 'Voir la commande' }
   toastTimer = setTimeout(() => toast.classList.remove('show'), 5000);
 }
 
-{
+function bindMenuBoxes() {
   const boxes = document.querySelectorAll('#menu .box[data-dish]');
   boxes.forEach((box) => {
     const addToOrder = () => {
@@ -380,6 +381,8 @@ function showToast(text, link = { href: '#commande', label: 'Voir la commande' }
   });
 }
 
+bindMenuBoxes();
+
 /* ---------- message de contact ---------- */
 const contactForm = document.getElementById('contactForm');
 
@@ -404,7 +407,7 @@ contactForm?.addEventListener('submit', async (event) => {
     return;
   }
   // secours : WhatsApp (lien cliquable, car le navigateur bloquerait une ouverture automatique)
-  finishWithWhatsApp(null, ['Bonjour Cuisto,', message, `— ${name} (${email})`], status,
+  finishWithWhatsApp(null, [`Bonjour ${SITE_NAME},`, message, `— ${name} (${email})`], status,
     'Envoi impossible pour le moment : écrivez-nous par WhatsApp.', true);
 });
 
@@ -441,17 +444,6 @@ appStartBtn?.addEventListener('click', () => {
 const GAME_SECONDS = 30;
 const MAX_SCORE = 500;
 const TIERS = [{ points: 100, percent: 5 }, { points: 200, percent: 10 }];
-const DISPLAY_NAMES = { Attieke: 'Attiéké', Akoume: 'Akoumè', Pokoume: 'Pokoumè' };
-const CLUES = {
-  'Riz blanc': 'Riz blanc bien parfumé, servi avec sa sauce tomate relevée',
-  Koliko: 'Frites d’igname dorées et croustillantes, avec du piment frais',
-  Brochette: 'Viande marinée et grillée, avec une sauce pimentée à part',
-  Spaghetti: 'Pâtes sautées aux légumes croquants et morceaux de viande',
-  Botocoin: 'Beignets dorés, croustillants dehors et moelleux dedans',
-  Attieke: 'Semoule de manioc fine et légère, avec poisson braisé et oignons',
-  Akoume: 'Pâte de maïs servie avec la sauce adémè bien onctueuse',
-  Pokoume: 'Pâte moelleuse servie avec sa sauce et sa viande, façon togolaise'
-};
 // ces deux plats se ressemblent : on ne les propose jamais ensemble dans une devinette
 const LOOKALIKES = [['Akoume', 'Pokoume']];
 
@@ -468,11 +460,16 @@ const rewardFill = document.getElementById('rewardFill');
 const rewardBar = document.getElementById('rewardBar');
 const rewardHint = document.getElementById('rewardHint');
 
-const gameDishes = [...document.querySelectorAll('#menu .box[data-dish]')].map((box) => ({
-  key: box.dataset.dish,
-  name: DISPLAY_NAMES[box.dataset.dish] || box.dataset.dish,
-  img: box.querySelector('img')?.getAttribute('src') || ''
-}));
+// plats du jeu = plats actuellement affichés dans le menu (donc ceux gérés dans l'administration)
+function readGameDishes() {
+  return [...document.querySelectorAll('#menu .box[data-dish]')].map((box) => ({
+    key: box.dataset.slug || box.dataset.dish,
+    name: box.dataset.dish,
+    img: box.querySelector('img')?.getAttribute('src') || '',
+    clue: box.dataset.clue || ''
+  }));
+}
+let gameDishes = readGameDishes();
 
 let score = 0;
 let timeLeft = GAME_SECONDS;
@@ -519,7 +516,7 @@ function setMessage(text) { gameMessage.textContent = text; }
 function generateRound() {
   if (!isPlaying || gameDishes.length < 4) return;
   const useClue = Math.random() < 0.5;
-  const pool = gameDishes.filter((d) => d.key !== previousKey && (!useClue || CLUES[d.key]));
+  const pool = gameDishes.filter((d) => d.key !== previousKey && (!useClue || (d.clue && !plain(d.clue).includes(plain(d.name)))));
   const target = pick(pool);
   previousKey = target.key;
   const others = shuffle(gameDishes.filter((d) => d.key !== target.key && !(useClue && isLookalike(target.key, d.key)))).slice(0, 3);
@@ -532,7 +529,7 @@ function generateRound() {
     questionBody.innerHTML = '';
     const clue = document.createElement('h3');
     clue.className = 'game-clue';
-    clue.textContent = `« ${CLUES[target.key]} »`;
+    clue.textContent = `« ${target.clue} »`;
     questionBody.append(clue);
     gameBoard.className = 'game-board photos';
     gameBoard.innerHTML = choices.map((d) => `
@@ -556,6 +553,8 @@ function generateRound() {
 }
 
 function startGame() {
+  gameDishes = readGameDishes();
+  if (gameDishes.length < 4) { setMessage('Le jeu sera disponible dès que le menu comptera au moins 4 plats.'); return; }
   score = 0;
   streak = 0;
   timeLeft = GAME_SECONDS;
@@ -784,26 +783,28 @@ try {
 /* ---------- Badge « Ouvert / Fermé » (heure du Togo, mêmes horaires que la section Contact) ---------- */
 (function openBadge() {
   const badges = document.querySelectorAll('[data-open-badge]');
-  if (!badges.length) return;
-  // [ouverture, fermeture] en heures, du dimanche (0) au samedi (6)
-  const HOURS = { 0: [12, 20], 1: [10, 22], 2: [10, 22], 3: [10, 22], 4: [10, 22], 5: [10, 22], 6: [10, 23] };
+  if (!badges.length || !window.SITE?.dayHours) return;
+  const SITE = window.SITE;
   const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const fmt = (h) => `${h}h00`;
+  const fmt = (h) => `${Math.floor(h)}h${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;
 
   function status() {
-    const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Africa/Lome', weekday: 'short', hour: 'numeric', minute: 'numeric', hourCycle: 'h23' }).formatToParts(new Date());
+    const parts = new Intl.DateTimeFormat('en-US', { timeZone: SITE.timezone || 'Africa/Lome', weekday: 'short', hour: 'numeric', minute: 'numeric', hourCycle: 'h23' }).formatToParts(new Date());
     const get = (type) => parts.find((p) => p.type === type)?.value;
     const day = DAYS.indexOf(get('weekday'));
     const now = Number(get('hour')) + Number(get('minute')) / 60;
-    const [open, close] = HOURS[day];
-    if (now >= open && now < close) {
-      return close - now <= 1
-        ? { cls: 'is-soon', text: `Ferme bientôt · ${fmt(close)}` }
-        : { cls: 'is-open', text: `Ouvert maintenant · jusqu'à ${fmt(close)}` };
+    const today = SITE.dayHours(day);
+    if (today && now >= today[0] && now < today[1]) {
+      return today[1] - now <= 1
+        ? { cls: 'is-soon', text: `Ferme bientôt · ${fmt(today[1])}` }
+        : { cls: 'is-open', text: `Ouvert maintenant · jusqu'à ${fmt(today[1])}` };
     }
-    if (now < open) return { cls: 'is-closed', text: `Fermé · ouvre à ${fmt(open)}` };
-    const next = HOURS[(day + 1) % 7][0];
-    return { cls: 'is-closed', text: `Fermé · ouvre demain à ${fmt(next)}` };
+    if (today && now < today[0]) return { cls: 'is-closed', text: `Fermé · ouvre à ${fmt(today[0])}` };
+    for (let i = 1; i <= 7; i++) {
+      const next = SITE.dayHours((day + i) % 7);
+      if (next) return { cls: 'is-closed', text: `Fermé · ouvre ${i === 1 ? 'demain' : 'bientôt'} à ${fmt(next[0])}` };
+    }
+    return { cls: 'is-closed', text: 'Fermé' };
   }
 
   function paint() {
@@ -817,3 +818,99 @@ try {
   paint();
   setInterval(paint, 60000);
 })();
+
+
+/* ---------- Menu et commande chargés depuis Supabase (gérés dans l'administration) ----------
+   Le HTML contient déjà le menu de départ : il reste affiché si la base est injoignable. */
+const imageSrc = (url) => (!url ? '' : /^(https?:|\/|\.)/.test(url) ? url : `./${url}`);
+
+function buildMenuBox(dish) {
+  const box = document.createElement('div');
+  box.className = 'box';
+  box.dataset.dish = dish.name;
+  box.dataset.slug = dish.slug;
+  if (dish.game_clue) box.dataset.clue = dish.game_clue;
+  box.setAttribute('role', 'button');
+  box.tabIndex = 0;
+
+  const imbox = document.createElement('div');
+  imbox.className = 'imbox';
+  if (dish.tag) {
+    const tag = document.createElement('span');
+    tag.className = 'dish-tag';
+    tag.textContent = dish.tag;
+    imbox.append(tag);
+  }
+  const img = document.createElement('img');
+  img.src = imageSrc(dish.image_url);
+  img.alt = dish.name;
+  img.loading = 'lazy';
+  img.decoding = 'async';
+  imbox.append(img);
+
+  const text = document.createElement('div');
+  text.className = 'text';
+  const title = document.createElement('h3');
+  title.textContent = dish.name;
+  const price = document.createElement('p');
+  price.className = 'dish-price';
+  price.textContent = formatPrice(dish.price);
+  text.append(title, price);
+  if (dish.description) {
+    const desc = document.createElement('p');
+    desc.className = 'dish-desc';
+    desc.textContent = dish.description;
+    text.append(desc);
+  }
+  box.append(imbox, text);
+  return box;
+}
+
+function buildOrderRow(dish, quantity) {
+  const label = document.createElement('label');
+  const span = document.createElement('span');
+  span.append(`${dish.name} `);
+  const strong = document.createElement('strong');
+  strong.textContent = formatPrice(dish.price);
+  span.append(strong);
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.min = '0';
+  input.max = '20';
+  input.value = quantity || '0';
+  input.dataset.price = String(dish.price);
+  input.dataset.dish = dish.name;
+  input.dataset.slug = dish.slug;
+  input.setAttribute('aria-label', `Quantité ${dish.name}`);
+  label.append(span, input);
+  return label;
+}
+
+async function loadMenu() {
+  const menuList = document.querySelector('#menu .contenu');
+  const orderList = document.querySelector('#orderForm .order-items');
+  if (!sb || !menuList || !orderList) return;
+  try {
+    const { data, error } = await sb.from('dishes')
+      .select('slug, name, price, description, image_url, tag, game_clue')
+      .eq('available', true).order('sort_order').order('name');
+    if (error || !Array.isArray(data)) return;
+
+    const quantities = new Map([...orderList.querySelectorAll('[data-slug]')].map((i) => [i.dataset.slug, i.value]));
+    if (!data.length) {
+      menuList.replaceChildren(Object.assign(document.createElement('p'), { className: 'empty', textContent: 'Le menu est en cours de mise à jour. Revenez bientôt !' }));
+      orderList.replaceChildren();
+      updateOrderTotal();
+      return;
+    }
+    const boxes = data.map(buildMenuBox);
+    menuList.replaceChildren(...boxes);
+    orderList.replaceChildren(...data.map((dish) => buildOrderRow(dish, quantities.get(dish.slug))));
+    registerReveal(boxes, 'zoom', 3);
+    bindMenuBoxes();
+    updateOrderTotal();
+    gameDishes = readGameDishes();
+  } catch (error) { console.error(error); }
+}
+
+loadMenu();
